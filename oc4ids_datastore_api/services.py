@@ -4,10 +4,13 @@ from oc4ids_datastore_api.schemas import Dataset, Download, License, Publisher
 
 
 def _transform_dataset(dataset: DatasetSQLModel) -> Dataset:
+    download_urls = {
+        "json": dataset.json_url,
+        "csv": dataset.csv_url,
+        "xlsx": dataset.xlsx_url,
+    }
     downloads = [
-        Download(format="json", url=(dataset.json_url or "")),
-        Download(format="csv", url=(dataset.csv_url or "")),
-        Download(format="xlsx", url=(dataset.xlsx_url or "")),
+        Download(format=format, url=url) for format, url in download_urls.items() if url
     ]
     return Dataset(
         loaded_at=dataset.updated_at,

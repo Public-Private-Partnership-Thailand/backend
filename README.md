@@ -33,8 +33,8 @@ While the app is running, go to `http://127.0.0.1:8000/docs/`
 ### Run linting and type checking
 
 ```
-black oc4ids_datastore_api/
-isort oc4ids_datastore_api/
-flake8 oc4ids_datastore_api/
-mypy oc4ids_datastore_api/
+black oc4ids_datastore_api/ tests/
+isort oc4ids_datastore_api/ tests/
+flake8 oc4ids_datastore_api/ tests/
+mypy oc4ids_datastore_api/ tests/
 ```
