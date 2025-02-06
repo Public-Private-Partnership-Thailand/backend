@@ -8,7 +8,9 @@ description = "OC4IDS Datastore API"
 version = "0.1.0"
 readme = "README.md"
 dependencies = [
-  "fastapi[standard]"
+  "fastapi[standard]",
+  "psycopg2",
+  "sqlmodel",
 ]
 
 [project.optional-dependencies]
