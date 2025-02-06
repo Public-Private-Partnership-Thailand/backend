@@ -16,6 +16,8 @@ pip install -r requirements_dev.txt
 
 ### Set database enrivonment variable
 
+With a read-only user, set the path to the already existing database, which is created by [oc4ids-datastore-pipeline](https://github.com/OpenDataServices/oc4ids-datastore-pipeline).
+
 ```
 export DATABASE_URL="postgresql://oc4ids_datastore_read_only@localhost/oc4ids_datastore"
 ```
