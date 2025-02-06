@@ -10,3 +10,21 @@ readme = "README.md"
 dependencies = [
   "fastapi[standard]"
 ]
+
+[project.optional-dependencies]
+dev = [
+  "black",
+  "isort",
+  "flake8",
+  "Flake8-pyproject",
+  "mypy",
+]
+
+[tool.isort]
+profile = "black"
+
+[tool.flake8]
+max-line-length = 88
+
+[tool.mypy]
+strict = true

@@ -11,12 +11,15 @@ anyio==4.8.0
     #   httpx
     #   starlette
     #   watchfiles
+black==25.1.0
+    # via oc4ids-datastore-api (pyproject.toml)
 certifi==2025.1.31
     # via
     #   httpcore
     #   httpx
 click==8.1.8
     # via
+    #   black
     #   rich-toolkit
     #   typer
     #   uvicorn
@@ -28,6 +31,12 @@ fastapi[standard]==0.115.8
     # via oc4ids-datastore-api (pyproject.toml)
 fastapi-cli[standard]==0.0.7
     # via fastapi
+flake8==7.1.1
+    # via
+    #   flake8-pyproject
+    #   oc4ids-datastore-api (pyproject.toml)
+flake8-pyproject==1.2.3
+    # via oc4ids-datastore-api (pyproject.toml)
 h11==0.14.0
     # via
     #   httpcore
@@ -43,18 +52,38 @@ idna==3.10
     #   anyio
     #   email-validator
     #   httpx
+isort==6.0.0
+    # via oc4ids-datastore-api (pyproject.toml)
 jinja2==3.1.5
     # via fastapi
 markdown-it-py==3.0.0
     # via rich
 markupsafe==3.0.2
     # via jinja2
+mccabe==0.7.0
+    # via flake8
 mdurl==0.1.2
     # via markdown-it-py
+mypy==1.15.0
+    # via oc4ids-datastore-api (pyproject.toml)
+mypy-extensions==1.0.0
+    # via
+    #   black
+    #   mypy
+packaging==24.2
+    # via black
+pathspec==0.12.1
+    # via black
+platformdirs==4.3.6
+    # via black
+pycodestyle==2.12.1
+    # via flake8
 pydantic==2.10.6
     # via fastapi
 pydantic-core==2.27.2
     # via pydantic
+pyflakes==3.2.0
+    # via flake8
 pygments==2.19.1
     # via rich
 python-dotenv==1.0.1
@@ -81,6 +110,7 @@ typing-extensions==4.12.2
     # via
     #   anyio
     #   fastapi
+    #   mypy
     #   pydantic
     #   pydantic-core
     #   rich-toolkit
