@@ -1,0 +1,38 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "oc4ids-datastore-api"
+description = "OC4IDS Datastore API"
+version = "0.1.0"
+readme = "README.md"
+dependencies = [
+  "fastapi[standard]",
+  "psycopg2",
+  "sqlmodel",
+]
+
+[project.optional-dependencies]
+dev = [
+  "black",
+  "isort",
+  "flake8",
+  "Flake8-pyproject",
+  "mypy",
+  "pytest",
+  "pytest-mock",
+]
+
+[tool.isort]
+profile = "black"
+
+[tool.flake8]
+max-line-length = 88
+
+[tool.mypy]
+strict = true
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
