@@ -40,3 +40,7 @@ isort oc4ids_datastore_api/ tests/
 flake8 oc4ids_datastore_api/ tests/
 mypy oc4ids_datastore_api/ tests/
 ```
+
+## Releasing
+
+To publish a new version, raise a PR to `main` updating the version in `pyproject.toml`. Once merged, create a git tag and GitHub release for the new version, with naming `vX.Y.Z`. This will trigger a docker image to to be built and pushed, tagged with the version and `latest`.
