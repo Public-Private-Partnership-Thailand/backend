@@ -19,6 +19,7 @@ def _transform_dataset(dataset: DatasetSQLModel) -> Dataset:
         license=License(
             url=dataset.license_url,
             title=dataset.license_title,
+            title_short=dataset.license_title_short,
         ),
         downloads=downloads,
     )

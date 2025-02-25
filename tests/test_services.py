@@ -18,6 +18,7 @@ def test_get_all_datasets(mocker: MockerFixture) -> None:
         publisher_name="test_publisher",
         license_url="https://license.com",
         license_title="License",
+        license_title_short="L",
         json_url="https://downloads/test_dataset.json",
         csv_url="https://downloads/test_dataset.csv",
         xlsx_url="https://downloads/test_dataset.xlsx",
@@ -31,7 +32,7 @@ def test_get_all_datasets(mocker: MockerFixture) -> None:
         loaded_at=now,
         source_url="https://test-dataset.json",
         publisher=Publisher(name="test_publisher"),
-        license=License(title="License", url="https://license.com"),
+        license=License(title="License", title_short="L", url="https://license.com"),
         downloads=[
             Download(format="json", url="https://downloads/test_dataset.json"),
             Download(format="csv", url="https://downloads/test_dataset.csv"),
@@ -52,6 +53,7 @@ def test_get_all_datasets_missing_download_formats(mocker: MockerFixture) -> Non
         publisher_name="test_publisher",
         license_url="https://license.com",
         license_title="License",
+        license_title_short="L",
         json_url="https://downloads/test_dataset.json",
         csv_url=None,
         xlsx_url=None,
@@ -65,7 +67,7 @@ def test_get_all_datasets_missing_download_formats(mocker: MockerFixture) -> Non
         loaded_at=now,
         source_url="https://test-dataset.json",
         publisher=Publisher(name="test_publisher"),
-        license=License(title="License", url="https://license.com"),
+        license=License(title="License", title_short="L", url="https://license.com"),
         downloads=[
             Download(format="json", url="https://downloads/test_dataset.json"),
         ],
