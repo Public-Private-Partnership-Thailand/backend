@@ -10,7 +10,7 @@ class DatasetSQLModel(SQLModel, table=True):
     source_url: str
     publisher_name: str
     license_url: str | None
-    license_name: str | None
+    license_title: str | None
     json_url: str | None
     csv_url: str | None
     xlsx_url: str | None
