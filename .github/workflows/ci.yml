@@ -23,3 +23,5 @@ jobs:
         run: mypy oc4ids_datastore_api/ tests/
       - name: Run tests
         run: pytest
+      - name: Build docker image
+        run: docker build -t oc4ids-datastore-api .
