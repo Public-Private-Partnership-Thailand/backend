@@ -9,7 +9,8 @@ class Publisher(BaseModel):
 
 class License(BaseModel):
     url: str | None
-    name: str | None
+    title: str | None
+    title_short: str | None
 
 
 class Download(BaseModel):

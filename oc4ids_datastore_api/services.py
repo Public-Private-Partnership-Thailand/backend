@@ -16,7 +16,11 @@ def _transform_dataset(dataset: DatasetSQLModel) -> Dataset:
         loaded_at=dataset.updated_at,
         source_url=dataset.source_url,
         publisher=Publisher(name=dataset.publisher_name),
-        license=License(url=dataset.license_url, name=dataset.license_name),
+        license=License(
+            url=dataset.license_url,
+            title=dataset.license_title,
+            title_short=dataset.license_title_short,
+        ),
         downloads=downloads,
     )
 
