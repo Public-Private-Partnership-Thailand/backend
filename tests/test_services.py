@@ -16,6 +16,7 @@ def test_get_all_datasets(mocker: MockerFixture) -> None:
         dataset_id="test_dataset",
         source_url="https://test-dataset.json",
         publisher_name="test_publisher",
+        publisher_country="ab",
         license_url="https://license.com",
         license_title="License",
         license_title_short="L",
@@ -31,7 +32,7 @@ def test_get_all_datasets(mocker: MockerFixture) -> None:
     expected_dataset = Dataset(
         loaded_at=now,
         source_url="https://test-dataset.json",
-        publisher=Publisher(name="test_publisher"),
+        publisher=Publisher(name="test_publisher", country="ab"),
         license=License(title="License", title_short="L", url="https://license.com"),
         downloads=[
             Download(format="json", url="https://downloads/test_dataset.json"),
@@ -66,7 +67,7 @@ def test_get_all_datasets_missing_download_formats(mocker: MockerFixture) -> Non
     expected_dataset = Dataset(
         loaded_at=now,
         source_url="https://test-dataset.json",
-        publisher=Publisher(name="test_publisher"),
+        publisher=Publisher(name="test_publisher", country=None),
         license=License(title="License", title_short="L", url="https://license.com"),
         downloads=[
             Download(format="json", url="https://downloads/test_dataset.json"),

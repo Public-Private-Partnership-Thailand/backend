@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "oc4ids-datastore-api"
 description = "OC4IDS Datastore API"
-version = "0.2.0"
+version = "0.3.0"
 readme = "README.md"
 dependencies = [
   "fastapi[standard]",

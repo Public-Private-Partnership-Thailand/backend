@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class Publisher(BaseModel):
     name: str
+    country: str | None
 
 
 class License(BaseModel):
