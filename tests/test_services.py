@@ -3,7 +3,7 @@ import datetime
 from pytest_mock import MockerFixture
 
 from oc4ids_datastore_api.models import DatasetSQLModel
-from oc4ids_datastore_api.schemas import Dataset, Download, License, Publisher
+from oc4ids_datastore_api.schemas import Dataset, Download, License, Portal, Publisher
 from oc4ids_datastore_api.services import get_all_datasets
 
 
@@ -20,6 +20,8 @@ def test_get_all_datasets(mocker: MockerFixture) -> None:
         license_url="https://license.com",
         license_title="License",
         license_title_short="L",
+        portal_url="https://portal.com",
+        portal_title="Portal",
         json_url="https://downloads/test_dataset.json",
         csv_url="https://downloads/test_dataset.csv",
         xlsx_url="https://downloads/test_dataset.xlsx",
@@ -34,6 +36,7 @@ def test_get_all_datasets(mocker: MockerFixture) -> None:
         source_url="https://test-dataset.json",
         publisher=Publisher(name="test_publisher", country="ab"),
         license=License(title="License", title_short="L", url="https://license.com"),
+        portal=Portal(title="Portal", url="https://portal.com"),
         downloads=[
             Download(format="json", url="https://downloads/test_dataset.json"),
             Download(format="csv", url="https://downloads/test_dataset.csv"),
@@ -69,6 +72,7 @@ def test_get_all_datasets_missing_download_formats(mocker: MockerFixture) -> Non
         source_url="https://test-dataset.json",
         publisher=Publisher(name="test_publisher", country=None),
         license=License(title="License", title_short="L", url="https://license.com"),
+        portal=Portal(title=None, url=None),
         downloads=[
             Download(format="json", url="https://downloads/test_dataset.json"),
         ],

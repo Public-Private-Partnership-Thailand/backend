@@ -13,6 +13,8 @@ class DatasetSQLModel(SQLModel, table=True):
     license_url: str | None
     license_title: str | None
     license_title_short: str | None
+    portal_title: str | None
+    portal_url: str | None
     json_url: str | None
     csv_url: str | None
     xlsx_url: str | None
