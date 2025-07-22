@@ -20,7 +20,7 @@ def test_get_all_datasets(mocker: MockerFixture) -> None:
         license_url="https://license.com",
         license_title="License",
         license_title_short="L",
-        portal_url="https://portal.com",
+        portal_url="http://portal.example.com",
         portal_title="Portal",
         json_url="https://downloads/test_dataset.json",
         csv_url="https://downloads/test_dataset.csv",
@@ -36,7 +36,7 @@ def test_get_all_datasets(mocker: MockerFixture) -> None:
         source_url="https://test-dataset.json",
         publisher=Publisher(name="test_publisher", country="ab"),
         license=License(title="License", title_short="L", url="https://license.com"),
-        portal=Portal(title="Portal", url="https://portal.com"),
+        portal=Portal(title="Portal", url="http://portal.example.com"),
         downloads=[
             Download(format="json", url="https://downloads/test_dataset.json"),
             Download(format="csv", url="https://downloads/test_dataset.csv"),
