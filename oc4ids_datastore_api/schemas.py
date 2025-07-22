@@ -14,6 +14,11 @@ class License(BaseModel):
     title_short: str | None
 
 
+class Portal(BaseModel):
+    url: str | None
+    title: str | None
+
+
 class Download(BaseModel):
     format: str
     url: str
@@ -24,4 +29,5 @@ class Dataset(BaseModel):
     source_url: str
     publisher: Publisher
     license: License
+    portal: Portal
     downloads: list[Download]

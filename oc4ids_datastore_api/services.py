@@ -1,6 +1,6 @@
 from oc4ids_datastore_api.database import fetch_all_datasets
 from oc4ids_datastore_api.models import DatasetSQLModel
-from oc4ids_datastore_api.schemas import Dataset, Download, License, Publisher
+from oc4ids_datastore_api.schemas import Dataset, Download, License, Portal, Publisher
 
 
 def _transform_dataset(dataset: DatasetSQLModel) -> Dataset:
@@ -22,6 +22,10 @@ def _transform_dataset(dataset: DatasetSQLModel) -> Dataset:
             url=dataset.license_url,
             title=dataset.license_title,
             title_short=dataset.license_title_short,
+        ),
+        portal=Portal(
+            url=dataset.portal_url,
+            title=dataset.portal_title,
         ),
         downloads=downloads,
     )
