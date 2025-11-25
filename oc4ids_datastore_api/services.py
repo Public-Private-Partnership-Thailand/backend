@@ -4,7 +4,6 @@ from oc4ids_datastore_api.schemas import Dataset, Download, License, Portal, Pub
 from sqlmodel import Session, select
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-import requests
 
 
 def _convert_project_to_dict(project: ProjectSQLModel) -> Dict[str, Any]:
@@ -17,7 +16,7 @@ def _convert_project_to_dict(project: ProjectSQLModel) -> Dict[str, Any]:
         "status": project.status or "active",
         "type": project.type or "",
         "purpose": project.purpose or "",
-        "language": project.language or "th",
+        "language": "th",
     }
     
     # Convert period
@@ -35,40 +34,40 @@ def _convert_project_to_dict(project: ProjectSQLModel) -> Dict[str, Any]:
         }
     
     # Convert optional periods
-    if project.identification_period:
+    if project.identificationPeriod:
         result["identificationPeriod"] = {
-            "startDate": project.identification_period.get("startDate", "") or "",
-            "endDate": project.identification_period.get("endDate", "") or "",
+            "startDate": project.identificationPeriod.get("startDate", "") or "",
+            "endDate": project.identificationPeriod.get("endDate", "") or "",
         }
     
-    if project.preparation_period:
+    if project.preparationPeriod:
         result["preparationPeriod"] = {
-            "startDate": project.preparation_period.get("startDate", "") or "",
-            "endDate": project.preparation_period.get("endDate", "") or "",
+            "startDate": project.preparationPeriod.get("startDate", "") or "",
+            "endDate": project.preparationPeriod.get("endDate", "") or "",
         }
     
-    if project.implementation_period:
+    if project.implementationPeriod:
         result["implementationPeriod"] = {
-            "startDate": project.implementation_period.get("startDate", "") or "",
-            "endDate": project.implementation_period.get("endDate", "") or "",
+            "startDate": project.implementationPeriod.get("startDate", "") or "",
+            "endDate": project.implementationPeriod.get("endDate", "") or "",
         }
     
-    if project.completion_period:
+    if project.completionPeriod:
         result["completionPeriod"] = {
-            "startDate": project.completion_period.get("startDate", "") or "",
-            "endDate": project.completion_period.get("endDate", "") or "",
+            "startDate": project.completionPeriod.get("startDate", "") or "",
+            "endDate": project.completionPeriod.get("endDate", "") or "",
         }
     
-    if project.maintenance_period:
+    if project.maintenancePeriod:
         result["maintenancePeriod"] = {
-            "startDate": project.maintenance_period.get("startDate", "") or "",
-            "endDate": project.maintenance_period.get("endDate", "") or "",
+            "startDate": project.maintenancePeriod.get("startDate", "") or "",
+            "endDate": project.maintenancePeriod.get("endDate", "") or "",
         }
     
-    if project.decommissioning_period:
+    if project.decommissioningPeriod:
         result["decommissioningPeriod"] = {
-            "startDate": project.decommissioning_period.get("startDate", "") or "",
-            "endDate": project.decommissioning_period.get("endDate", "") or "",
+            "startDate": project.decommissioningPeriod.get("startDate", "") or "",
+            "endDate": project.decommissioningPeriod.get("endDate", "") or "",
         }
     
     # Convert sector (can be list or dict in database)
@@ -142,8 +141,8 @@ def _convert_project_to_dict(project: ProjectSQLModel) -> Dict[str, Any]:
         result["parties"] = []
     
     # Convert public authority
-    if project.public_authority:
-        result["publicAuthority"] = project.public_authority
+    if project.publicAuthority:
+        result["publicAuthority"] = project.publicAuthority
     else:
         result["publicAuthority"] = {
             "name": "",
@@ -160,16 +159,16 @@ def _convert_project_to_dict(project: ProjectSQLModel) -> Dict[str, Any]:
         result["identifiers"] = []
     
     # Convert optional fields
-    if project.additional_classifications:
-        result["additionalClassifications"] = project.additional_classifications if isinstance(project.additional_classifications, list) else []
+    if project.additionalClassifications:
+        result["additionalClassifications"] = project.additionalClassifications if isinstance(project.additionalClassifications, list) else []
     else:
         result["additionalClassifications"] = []
     
-    if project.related_projects:
-        result["relatedProjects"] = project.related_projects if isinstance(project.related_projects, list) else []
+    if project.relatedProjects:
+        result["relatedProjects"] = project.relatedProjects if isinstance(project.relatedProjects, list) else []
     
-    if project.asset_lifetime:
-        result["assetLifetime"] = project.asset_lifetime
+    if project.assetLifetime:
+        result["assetLifetime"] = project.assetLifetime
     
     if project.documents:
         result["documents"] = project.documents if isinstance(project.documents, list) else []
@@ -180,11 +179,11 @@ def _convert_project_to_dict(project: ProjectSQLModel) -> Dict[str, Any]:
     if project.metrics:
         result["metrics"] = project.metrics if isinstance(project.metrics, list) else []
     
-    if project.cost_measurements:
-        result["costMeasurements"] = project.cost_measurements if isinstance(project.cost_measurements, list) else []
+    if project.costMeasurements:
+        result["costMeasurements"] = project.costMeasurements if isinstance(project.costMeasurements, list) else []
     
-    if project.contracting_processes:
-        result["contractingProcesses"] = project.contracting_processes if isinstance(project.contracting_processes, list) else []
+    if project.contractingProcesses:
+        result["contractingProcesses"] = project.contractingProcesses if isinstance(project.contractingProcesses, list) else []
     
     if project.milestones:
         result["milestones"] = project.milestones if isinstance(project.milestones, list) else []
@@ -195,8 +194,8 @@ def _convert_project_to_dict(project: ProjectSQLModel) -> Dict[str, Any]:
     if project.completion:
         result["completion"] = project.completion
     
-    if project.lobbying_meetings:
-        result["lobbyingMeetings"] = project.lobbying_meetings if isinstance(project.lobbying_meetings, list) else []
+    if project.lobbyingMeetings:
+        result["lobbyingMeetings"] = project.lobbyingMeetings if isinstance(project.lobbyingMeetings, list) else []
     
     if project.social:
         result["social"] = project.social
@@ -204,8 +203,8 @@ def _convert_project_to_dict(project: ProjectSQLModel) -> Dict[str, Any]:
     if project.environment:
         result["environment"] = project.environment
     
-    if project.policy_alignment:
-        result["policyAlignment"] = project.policy_alignment
+    if project.policyAlignment:
+        result["policyAlignment"] = project.policyAlignment
     
     if project.benefits:
         result["benefits"] = project.benefits if isinstance(project.benefits, list) else []

@@ -1,15 +1,18 @@
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request,FastAPI, UploadFile, File
 from sqlmodel import Session
 from oc4ids_datastore_api.database import get_session
 from oc4ids_datastore_api.schemas import Dataset
 from oc4ids_datastore_api.services import get_all_datasets, get_project_by_id
 from oc4ids_datastore_api.models import ProjectSQLModel
 from fastapi.middleware.cors import CORSMiddleware
+from libcoveoc4ids.api import oc4ids_json_output
 from typing import Dict, Any
 from datetime import datetime
 import json
 import logging
 import uuid
+import pandas as pd
+
 
 app = FastAPI()
 
@@ -35,6 +38,80 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def extract_messages(errors):
+    messages = []
+    for error_json_str, locations in errors:
+        error = json.loads(error_json_str)
+        messages.append(error.get("message"))
+    return messages
+
+
+def check_keys_exist_and_clean(project_data: Dict[str, Any]):
+    model_keys = set(ProjectSQLModel.__annotations__.keys())
+    input_keys = set(project_data.keys())
+
+    missing_keys = model_keys - input_keys
+    extra_keys = input_keys - model_keys
+
+    errors = []
+    if missing_keys:
+        errors.extend([f"Missing key: {k}" for k in missing_keys])
+    if extra_keys:
+        errors.extend([f"Unexpected key: {k}" for k in extra_keys])
+
+    if errors:
+        raise HTTPException(status_code=400, detail={"validation_errors": errors})
+    cleaned_data = {
+    key: value
+    for key, value in project_data.items()
+    if not (isinstance(value, str) and value.strip() == "")
+    }
+
+    
+    return cleaned_data
+
+
+def add_metadata(project_data: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "version": "0.9",
+        "uri": "https://standard.open-contracting.org/infrastructure/0.9/en/_static/example.json",
+        "publishedDate": "2018-12-10T15:53:00Z",
+        "publisher": {
+            "name": "Open Data Services Co-operative Limited",
+            "scheme": "GB-COH",
+            "uid": "9506232",
+            "uri": "http://data.companieshouse.gov.uk/doc/company/09506232"
+        },
+        "license": "http://opendatacommons.org/licenses/pddl/1.0/",
+        "publicationPolicy": "https://standard.open-contracting.org/1.1/en/implementation/publication_policy/",
+        "projects": [
+            project_data
+        ]
+    }
+def create_new_data(project_data: Dict[str, Any], session: Session) -> Dict[str, Any]:
+    if not project_data.get("id"):
+        project_data["id"] = str(uuid.uuid4())
+    logger.info(f"Creating new project with ID {project_data['id']}: {json.dumps(project_data, indent=2, default=str)}")
+
+
+    project_data = check_keys_exist_and_clean(project_data)
+
+    wrapped = add_metadata(project_data)
+
+    validation_result = oc4ids_json_output(json_data=wrapped)
+    validation_errors = validation_result.get("validation_errors", [])
+    if validation_errors:
+        messages = extract_messages(validation_errors)
+        raise HTTPException(status_code=400, detail={"validation_errors": messages})
+
+
+    db_project = ProjectSQLModel(**project_data)  
+    session.add(db_project)
+    session.commit()
+    session.refresh(db_project)
+    return {"message": "Project created successfully", "project": db_project}
+
+
 
 @app.get("/api/datasets")
 def read_projects(session: Session = Depends(get_session)) -> list[Dict[str, Any]]:
@@ -51,91 +128,34 @@ def read_project(project_id: str, session: Session = Depends(get_session)) -> Di
     return project
 
 
+@app.post("/api/upload")
+async def upload_file(file: UploadFile = File(...), session: Session = Depends(get_session)):
+    filename = file.filename
+    ext = filename.split(".")[-1].lower()
+
+    try:
+        if ext == "json":
+            contents = await file.read()
+            data = json.loads(contents)
+            return create_new_data(data, session)
+
+        elif ext == "csv":
+            contents = await file.read()
+            from io import BytesIO
+            df = pd.read_csv(BytesIO(contents))
+            return {"status": "success", "data": df.to_dict(orient="records")}
+
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type")
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.post("/api/datasets")
 async def create_project(request: Request, session: Session = Depends(get_session)):
-    """Create a new project from frontend data"""
-    try:
-        # Get request body as JSON
-        project_data = await request.json()
-        logger.info(f"Received project data: {json.dumps(project_data, indent=2, default=str)}")
-        
-        # Generate ID if not provided or empty
-        project_id = project_data.get("id")
-        if not project_id or project_id == "":
-            project_id = f"project-{uuid.uuid4().hex[:12]}"
-            logger.info(f"Generated new project ID: {project_id}")
-        
-        # Parse updated date
-        updated_date = datetime.utcnow()
-        if project_data.get("updated"):
-            try:
-                updated_str = project_data.get("updated")
-                if "Z" in updated_str:
-                    updated_str = updated_str.replace("Z", "+00:00")
-                updated_date = datetime.fromisoformat(updated_str)
-            except (ValueError, AttributeError) as e:
-                logger.warning(f"Could not parse updated date: {e}, using current time")
-                updated_date = datetime.utcnow()
-        
-        # Convert frontend format to database format
-        db_project = ProjectSQLModel(
-            id=project_id,
-            title=project_data.get("title"),
-            description=project_data.get("description"),
-            status=project_data.get("status"),
-            type=project_data.get("type"),
-            purpose=project_data.get("purpose"),
-            language=project_data.get("language", "th"),
-            updated=updated_date,
-            period=project_data.get("period"),
-            identification_period=project_data.get("identificationPeriod"),
-            preparation_period=project_data.get("preparationPeriod"),
-            implementation_period=project_data.get("implementationPeriod"),
-            completion_period=project_data.get("completionPeriod"),
-            maintenance_period=project_data.get("maintenancePeriod"),
-            decommissioning_period=project_data.get("decommissioningPeriod"),
-            sector=project_data.get("sector"),
-            locations=project_data.get("locations"),
-            budget=project_data.get("budget"),
-            parties=project_data.get("parties"),
-            public_authority=project_data.get("publicAuthority"),
-            identifiers=project_data.get("identifiers"),
-            additional_classifications=project_data.get("additionalClassifications"),
-            related_projects=project_data.get("relatedProjects"),
-            asset_lifetime=project_data.get("assetLifetime"),
-            documents=project_data.get("documents"),
-            forecasts=project_data.get("forecasts"),
-            metrics=project_data.get("metrics"),
-            cost_measurements=project_data.get("costMeasurements"),
-            contracting_processes=project_data.get("contractingProcesses"),
-            milestones=project_data.get("milestones"),
-            transactions=project_data.get("transactions"),
-            completion=project_data.get("completion"),
-            lobbying_meetings=project_data.get("lobbyingMeetings"),
-            social=project_data.get("social"),
-            environment=project_data.get("environment"),
-            policy_alignment=project_data.get("policyAlignment"),
-            benefits=project_data.get("benefits"),
-        )
-        
-        logger.info(f"Attempting to create project with ID: {db_project.id}")
-        session.add(db_project)
-        session.commit()
-        session.refresh(db_project)
-        logger.info(f"Project created successfully with ID: {db_project.id}")
-        
-        # Return in frontend format
-        created_project = get_project_by_id(session, db_project.id)
-        if not created_project:
-            raise HTTPException(status_code=500, detail="Project was created but could not be retrieved")
-        
-        return {"message": "Project created successfully", "project": created_project}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error creating project: {str(e)}", exc_info=True)
-        session.rollback()
-        raise HTTPException(status_code=400, detail=f"Error creating project: {str(e)}")
+    project_data = await request.json()
+    return create_new_data(project_data, session)
 
 
 @app.put("/api/datasets/{project_id}")

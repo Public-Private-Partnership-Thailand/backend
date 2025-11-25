@@ -1,47 +1,53 @@
-import datetime
-
-from sqlmodel import SQLModel, Field,Column
+from sqlmodel import SQLModel, Field
+from sqlalchemy import Column, TIMESTAMP
 from sqlalchemy.dialects.postgresql import JSONB
-from typing import Optional, Any, Dict
-import datetime
+from typing import Optional
+from datetime import datetime
 
 class ProjectSQLModel(SQLModel, table=True):
     __tablename__ = "projects"
 
     id: str = Field(primary_key=True)
-    identifiers: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    updated: Optional[datetime.datetime] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    status: Optional[str] = None
-    period: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    identification_period: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    preparation_period: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    implementation_period: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    completion_period: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    maintenance_period: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    decommissioning_period: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    sector: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    additional_classifications: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    related_projects: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    asset_lifetime: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    locations: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    budget: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    cost_measurements: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    parties: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    public_authority: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    documents: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    forecasts: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    metrics: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    contracting_processes: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    milestones: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    transactions: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    completion: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    lobbying_meetings: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    social: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    environment: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    policy_alignment: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    benefits: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB))
-    type: Optional[str] = None
-    purpose: Optional[str] = None
-    language: Optional[str] = None
+
+    identifiers: Optional[dict] = Field(default=None, sa_column=Column("identifiers", JSONB))
+    updated: Optional[datetime] = Field(default=None, sa_column=Column("updated", TIMESTAMP))
+    title: Optional[str] = Field(default=None, sa_column=Column("title"))
+    description: Optional[str] = Field(default=None, sa_column=Column("description"))
+
+    status: Optional[str] = Field(default=None, sa_column=Column("status"))
+
+    period: Optional[dict] = Field(default=None, sa_column=Column("period", JSONB))
+    identificationPeriod: Optional[dict] = Field(default=None, sa_column=Column("identificationperiod", JSONB))
+    preparationPeriod: Optional[dict] = Field(default=None, sa_column=Column("preparationperiod", JSONB))
+    implementationPeriod: Optional[dict] = Field(default=None, sa_column=Column("implementationperiod", JSONB))
+    completionPeriod: Optional[dict] = Field(default=None, sa_column=Column("completionperiod", JSONB))
+    maintenancePeriod: Optional[dict] = Field(default=None, sa_column=Column("maintenanceperiod", JSONB))
+    decommissioningPeriod: Optional[dict] = Field(default=None, sa_column=Column("decommissioningperiod", JSONB))
+
+    sector: Optional[dict] = Field(default=None, sa_column=Column("sector", JSONB))
+    purpose: Optional[str] = Field(default=None, sa_column=Column("purpose"))
+    additionalClassifications: Optional[dict] = Field(default=None, sa_column=Column("additionalclassifications", JSONB))
+    type: Optional[dict] = Field(default=None, sa_column=Column("type", JSONB))
+    relatedProjects: Optional[dict] = Field(default=None, sa_column=Column("relatedprojects", JSONB))
+
+    assetLifetime: Optional[dict] = Field(default=None, sa_column=Column("assetlifetime", JSONB))
+    locations: Optional[dict] = Field(default=None, sa_column=Column("locations", JSONB))
+    budget: Optional[dict] = Field(default=None, sa_column=Column("budget", JSONB))
+    costMeasurements: Optional[dict] = Field(default=None, sa_column=Column("costmeasurements", JSONB))
+    forecasts: Optional[dict] = Field(default=None, sa_column=Column("forecasts", JSONB))
+
+    parties: Optional[dict] = Field(default=None, sa_column=Column("parties", JSONB))
+    publicAuthority: Optional[dict] = Field(default=None, sa_column=Column("publicauthority", JSONB))
+    documents: Optional[dict] = Field(default=None, sa_column=Column("documents", JSONB))
+    contractingProcesses: Optional[dict] = Field(default=None, sa_column=Column("contractingprocesses", JSONB))
+
+    metrics: Optional[dict] = Field(default=None, sa_column=Column("metrics", JSONB))
+    transactions: Optional[dict] = Field(default=None, sa_column=Column("transactions", JSONB))
+    milestones: Optional[dict] = Field(default=None, sa_column=Column("milestones", JSONB))
+    completion: Optional[dict] = Field(default=None, sa_column=Column("completion", JSONB))
+    lobbyingMeetings: Optional[dict] = Field(default=None, sa_column=Column("lobbyingmeetings", JSONB))
+
+    social: Optional[dict] = Field(default=None, sa_column=Column("social", JSONB))
+    environment: Optional[dict] = Field(default=None, sa_column=Column("environment", JSONB))
+    benefits: Optional[dict] = Field(default=None, sa_column=Column("benefits", JSONB))
+    policyAlignment: Optional[dict] = Field(default=None, sa_column=Column("policyalignment", JSONB))
