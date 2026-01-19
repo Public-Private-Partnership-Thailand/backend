@@ -5,7 +5,7 @@ from sqlalchemy import Engine
 from sqlmodel import Session, create_engine, select
 from sqlmodel import SQLModel, Field
 
-from oc4ids_datastore_api.models import ProjectSQLModel
+from oc4ids_datastore_api.models import Project
 
 
 engine = create_engine(os.environ["DATABASE_URL"], echo=False)
@@ -22,11 +22,3 @@ def get_session():
     with Session(engine) as session:
         yield session
 
-
-#def fetch_all_datasets() -> Sequence[ProjectSQLModel]:
-#    with Session(get_engine()) as session:
-#        return session.exec(select(DatasetSQLModel)).all()
-
-#def post_new_dataset() -> Sequence[DatasetSQLModel]:
-#    with Session(get_engine()) as session:
-#        return session.exec()

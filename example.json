@@ -13,7 +13,6 @@
   "projects": [
     {
       "id": "oc4ids-bu3kcz-m75-junctions-4-to-5-smart-motorway",
-
       "identifiers": [
         {
           "id": "M75/SM/4-5",
@@ -53,7 +52,10 @@
         "startDate": "2040-07-01T00:00:00Z",
         "endDate": "2041-06-30T00:00:00Z"
       },
-      "sector": ["transport", "transport.road"],
+      "sector": [
+        "transport",
+        "transport.road"
+      ],
       "additionalClassifications": [
         {
           "scheme": "COFOG",
@@ -83,11 +85,16 @@
           "description": "M75 J4 Patcham Interchange",
           "geometry": {
             "type": "Point",
-            "coordinates": [52.2571843, -0.1163333]
+            "coordinates": [
+              52.2571843,
+              -0.1163333
+            ]
           },
           "gazetteer": {
             "scheme": "GEONAMES",
-            "identifiers": ["2657507"]
+            "identifiers": [
+              "2657507"
+            ]
           },
           "address": {
             "streetAddress": "Patcham Interchange, New Road",
@@ -103,11 +110,16 @@
           "description": "M75 J5 Windlesham interchange",
           "geometry": {
             "type": "Point",
-            "coordinates": [52.1373584, -0.1198955]
+            "coordinates": [
+              52.1373584,
+              -0.1198955
+            ]
           },
           "gazetteer": {
             "scheme": "OSMN",
-            "identifiers": ["https://www.openstreetmap.org/node/26571091"]
+            "identifiers": [
+              "https://www.openstreetmap.org/node/26571091"
+            ]
           },
           "address": {
             "streetAddress": "Windlesham Interchange, Old Road",
@@ -186,7 +198,9 @@
         "finance": [
           {
             "id": "1",
-            "assetClass": ["debt"],
+            "assetClass": [
+              "debt"
+            ],
             "type": "loan",
             "concessional": true,
             "value": {
@@ -318,7 +332,10 @@
             "telephone": "+44 0123 456 7890",
             "url": "https://www.example.com"
           },
-          "roles": ["supplier", "tenderer"]
+          "roles": [
+            "supplier",
+            "tenderer"
+          ]
         },
         {
           "name": "Motorway Design Services PLC",
@@ -336,7 +353,9 @@
             "postalCode": "ES22 3TW",
             "countryName": "United Kingdom"
           },
-          "roles": ["tenderer"]
+          "roles": [
+            "tenderer"
+          ]
         },
         {
           "name": "Expert Motorway Supervisors Ltd",
@@ -361,7 +380,10 @@
             "faxNumber": "+44 0123 456 7891",
             "url": "https://www.example.com"
           },
-          "roles": ["supplier", "tenderer"]
+          "roles": [
+            "supplier",
+            "tenderer"
+          ]
         },
         {
           "name": "Concrete Motorways Construction",
@@ -386,7 +408,10 @@
             "faxNumber": "+44 0123 456 7891",
             "url": "https://www.example.com"
           },
-          "roles": ["supplier", "tenderer"],
+          "roles": [
+            "supplier",
+            "tenderer"
+          ],
           "beneficialOwners": [
             {
               "id": "1",
@@ -395,7 +420,9 @@
                 "scheme": "PRY-IDCARD",
                 "id": "12345"
               },
-              "nationalities": ["PY"],
+              "nationalities": [
+                "PY"
+              ],
               "address": {
                 "streetAddress": "Avenida Eusebio Ayala 1347",
                 "locality": "Asunción",
@@ -430,7 +457,9 @@
             "telephone": "+44 0678 456 7890",
             "faxNumber": "+44 0678 456 7891"
           },
-          "roles": ["administrativeEntity"],
+          "roles": [
+            "administrativeEntity"
+          ],
           "people": [
             {
               "id": "1",
@@ -442,7 +471,10 @@
         {
           "id": "1",
           "name": "United Nations Development Programme",
-          "roles": ["payer", "funder"]
+          "roles": [
+            "payer",
+            "funder"
+          ]
         }
       ],
       "publicAuthority": {
@@ -598,7 +630,9 @@
           "summary": {
             "ocid": "ocds-a1b1c1-c9b14c18-adc8-11e6-9901-0019b9f3037b",
             "externalReference": "2016-SMP-M75-J4_J5-construction",
-            "nature": ["construction"],
+            "nature": [
+              "construction"
+            ],
             "title": "Smart Motorways Programme - Construction - Package 3 - M75 J8 - 10",
             "description": "Collaborative Delivery Framework (CDF) - Lot 3B - Construction  £10 to  £50m",
             "status": "closed",
@@ -627,7 +661,9 @@
               },
               "sustainability": [
                 {
-                  "strategies": ["awardCriteria"]
+                  "strategies": [
+                    "awardCriteria"
+                  ]
                 }
               ]
             },
@@ -762,7 +798,9 @@
                 "currency": "USD"
               },
               "laborObligations": {
-                "obligations": ["minimumWage"],
+                "obligations": [
+                  "minimumWage"
+                ],
                 "description": "The local minimum wage will be paid to all contracted workers."
               }
             }
@@ -771,37 +809,49 @@
             {
               "id": "ocds-a1b1c1-c9b14c18-adc8-11e6-9901-0019b9f3037b-cdfpc3b0011",
               "date": "2015-09-16T15:12:32Z",
-              "tag": ["tender"],
+              "tag": [
+                "tender"
+              ],
               "url": "https://example.com/Published/releases/5553-b55.json"
             },
             {
               "id": "ocds-a1b1c1-c9b14c18-adc8-11e6-9901-0019b9f3037b-cdfpc3b0012",
               "date": "2015-12-16T15:15:00Z",
-              "tag": ["award"],
+              "tag": [
+                "award"
+              ],
               "url": "https://example.com/Published/releases/5553-b56.json"
             },
             {
               "id": "ocds-a1b1c1-c9b14c18-adc8-11e6-9901-0019b9f3037b-cdfpc3b0013",
               "date": "2015-12-16T15:15:00Z",
-              "tag": ["contract"],
+              "tag": [
+                "contract"
+              ],
               "url": "https://example.com/Published/releases/5553-b57.json"
             },
             {
               "id": "ocds-a1b1c1-c9b14c18-adc8-11e6-9901-0019b9f3037b-cdfpc3b0014",
               "date": "2015-12-16T15:15:00Z",
-              "tag": ["implementation"],
+              "tag": [
+                "implementation"
+              ],
               "url": "https://example.com/Published/releases/5553-b58.json"
             },
             {
               "id": "ocds-a1b1c1-c9b14c18-adc8-11e6-9901-0019b9f3037b-cdfpc3b0015",
               "date": "2018-04-01T15:15:00Z",
-              "tag": ["implementationUpdate"],
+              "tag": [
+                "implementationUpdate"
+              ],
               "url": "https://example.com/Published/releases/5553-b59.json"
             },
             {
               "id": "ocds-a1b1c1-c9b14c18-adc8-11e6-9901-0019b9f3037b-cdfpc3b0016",
               "date": "2018-12-10T09:15:00Z",
-              "tag": ["contractTermination"],
+              "tag": [
+                "contractTermination"
+              ],
               "url": "https://example.com/Published/releases/5553-b60.json"
             }
           ]
@@ -811,7 +861,9 @@
           "summary": {
             "ocid": "ocds-a1b1c1-a410a80d-adc8-11e6-9901-0019b9f3037b",
             "externalReference": "2016-SMP-M75-J4_J5-design",
-            "nature": ["design"],
+            "nature": [
+              "design"
+            ],
             "title": "Smart Motorway Design M75 J4-5",
             "description": "Design of Smart Motorway upgrade M75 J4-5",
             "status": "closed",
@@ -878,19 +930,26 @@
             {
               "id": "ocds-cdf-pc10008",
               "date": "2016-04-01T00:00:00Z",
-              "tag": ["tender"],
+              "tag": [
+                "tender"
+              ],
               "url": "https://www.example.com/releases/ocds-cdf-pc10008.json"
             },
             {
               "id": "ocds-cdf-pc10009",
               "date": "2016-06-01T15:49:19Z",
-              "tag": ["award"],
+              "tag": [
+                "award"
+              ],
               "url": "https://www.example.com/releases/ocds-cdf-pc10009.json"
             },
             {
               "id": "ocds-cdf-pc10010",
               "date": "2017-08-17T00:00:00Z",
-              "tag": ["implementation", "contractTermination"],
+              "tag": [
+                "implementation",
+                "contractTermination"
+              ],
               "url": "https://www.example.com/releases/ocds-cdf-pc10010.json"
             }
           ]
@@ -900,7 +959,9 @@
           "summary": {
             "ocid": "ocds-a1b1c1-370ad85a-097f-4b8c-adf8-09d840c7c48b",
             "externalReference": "2016-SMP-M75-J4_J5-supervision",
-            "nature": ["supervision"],
+            "nature": [
+              "supervision"
+            ],
             "title": "Commercial Management and Assurance for the Motorways Upgrade Programme M75 J4-5",
             "description": "Specialist Professional and Technical Services Framework: Commercial Management and Assurance for the Motorways Upgrade Programme M75 J4-5",
             "status": "closed",
@@ -962,25 +1023,33 @@
             {
               "id": "ocds-a1b1c1-spats-2-033e",
               "date": "2017-03-02T17:14:37Z",
-              "tag": ["tender"],
+              "tag": [
+                "tender"
+              ],
               "url": "https://example.com/releases/ex-a1b1c1--033e.json"
             },
             {
               "id": "ocds-a1b1c1-spats-2-033f",
               "date": "2017-05-02T17:14:37Z",
-              "tag": ["award"],
+              "tag": [
+                "award"
+              ],
               "url": "https://example.com/releases/ex-a1b1c1--033f.json"
             },
             {
               "id": "ocds-a1b1c1-spats-2-033g",
               "date": "2017-07-02T17:14:37Z",
-              "tag": ["implementation"],
+              "tag": [
+                "implementation"
+              ],
               "url": "https://example.com/Published/releases/ex-a1b1c1--033g.json"
             },
             {
               "id": "ocds-a1b1c1-spats-2-033h",
               "date": "2018-12-10T14:45:00Z",
-              "tag": ["contractTermination"],
+              "tag": [
+                "contractTermination"
+              ],
               "url": "https://example.com/releases/ex-a1b1c1--033h.json"
             }
           ]
@@ -1089,13 +1158,18 @@
         "inIndigenousLand": false,
         "healthAndSafety": {
           "materialTests": {
-            "tests": ["masonry", "metal"],
+            "tests": [
+              "masonry",
+              "metal"
+            ],
             "description": "Onsite tests were conducted on the steel frames and masonry according to relevant ASTM International standards."
           }
         }
       },
       "environment": {
-        "goals": ["climateChangeMitigation"],
+        "goals": [
+          "climateChangeMitigation"
+        ],
         "conservationMeasures": [
           {
             "type": "locationAnalysis",
@@ -1108,7 +1182,9 @@
             "description": "Waste management plans will be incorporated into all stages of the project to minimize waste produced and ensure unavoidable waste is disposed of in an environmentally responsible manner."
           }
         ],
-        "climateOversightTypes": ["internal"],
+        "climateOversightTypes": [
+          "internal"
+        ],
         "hasImpactAssessment": true,
         "impactCategories": [
           {
@@ -1123,13 +1199,17 @@
         "inProtectedArea": true,
         "climateMeasures": [
           {
-            "type": ["regenerativeDesign"],
+            "type": [
+              "regenerativeDesign"
+            ],
             "description": "Regenerative design measures for the project include biomimicry to imitate nature."
           }
         ]
       },
       "policyAlignment": {
-        "policies": ["infrastructurePlan"],
+        "policies": [
+          "infrastructurePlan"
+        ],
         "description": "The project is intended to contribute towards the goals set out in the 2021 Australian Infrastructure Plan."
       },
       "benefits": [
