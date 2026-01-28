@@ -1,5 +1,5 @@
 CREATE TABLE "projects" (
-  "id" text PRIMARY KEY DEFAULT (gen_random_uuid()::text),
+  "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
   "title" text NOT NULL,
   "description" text,
   "status" text,
@@ -7,23 +7,22 @@ CREATE TABLE "projects" (
   "project_type_id" int,
   "public_authority_id" int,
   "created_at" timestamp NOT NULL DEFAULT (now()),
-  "created_by" text,
+  "created_by" uuid,
   "updated_at" timestamp NOT NULL DEFAULT (now()),
-  "updated_by" text,
-  "deleted_at" timestamp,
-  "raw_data" text
+  "updated_by" uuid,
+  "deleted_at" timestamp
 );
 
 CREATE TABLE "project_identifiers" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "identifier_value" text NOT NULL,
   "scheme" varchar(50)
 );
 
 CREATE TABLE "project_periods" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "period_type" text NOT NULL,
   "start_date" date,
   "end_date" date,
@@ -54,7 +53,7 @@ CREATE TABLE "sector" (
 );
 
 CREATE TABLE "project_sector" (
-  "project_id" text,
+  "project_id" uuid,
   "sector_id" int,
   PRIMARY KEY ("project_id", "sector_id")
 );
@@ -68,14 +67,14 @@ CREATE TABLE "additional_classifications" (
 );
 
 CREATE TABLE "project_additional_classifications" (
-  "project_id" text,
+  "project_id" uuid,
   "classification_id" bigint,
   PRIMARY KEY ("project_id", "classification_id")
 );
 
 CREATE TABLE "project_related_projects" (
-  "id" text PRIMARY KEY DEFAULT (gen_random_uuid()::text),
-  "project_id" text NOT NULL,
+  "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
+  "project_id" uuid NOT NULL,
   "relationship_id" text NOT NULL,
   "scheme" text,
   "identifier" text NOT NULL,
@@ -85,8 +84,8 @@ CREATE TABLE "project_related_projects" (
 );
 
 CREATE TABLE "project_locations" (
-  "id" text PRIMARY KEY DEFAULT (gen_random_uuid()::text),
-  "project_id" text NOT NULL,
+  "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
+  "project_id" uuid NOT NULL,
   "description" text,
   "uri" text,
   "geometry_type" text,
@@ -100,7 +99,7 @@ CREATE TABLE "project_locations" (
 
 CREATE TABLE "location_gazetteers" (
   "id" bigserial PRIMARY KEY,
-  "location_id" text UNIQUE NOT NULL,
+  "location_id" uuid UNIQUE NOT NULL,
   "scheme" text NOT NULL
 );
 
@@ -112,7 +111,7 @@ CREATE TABLE "location_gazetteer_identifiers" (
 
 CREATE TABLE "project_documents" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "local_id" text NOT NULL,
   "document_type" text,
   "title" text,
@@ -130,7 +129,7 @@ CREATE TABLE "project_documents" (
 
 CREATE TABLE "project_budgets" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text UNIQUE NOT NULL,
+  "project_id" uuid UNIQUE NOT NULL,
   "description" text,
   "total_amount" numeric,
   "currency" text,
@@ -183,7 +182,7 @@ CREATE TABLE "project_finance" (
 
 CREATE TABLE "project_cost_measurements" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "local_id" text NOT NULL,
   "measurement_date" date,
   "lifecycle_cost_amount" numeric,
@@ -210,7 +209,7 @@ CREATE TABLE "cost_items" (
 
 CREATE TABLE "project_forecasts" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "local_id" text NOT NULL,
   "title" text,
   "description" text
@@ -237,7 +236,7 @@ CREATE TABLE "forecast_observations" (
 
 CREATE TABLE "project_parties" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "local_id" text NOT NULL,
   "name" text,
   "identifier_scheme" text,
@@ -311,7 +310,7 @@ CREATE TABLE "party_classifications" (
 
 CREATE TABLE "project_contracting_processes" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "local_id" text NOT NULL,
   "ocid" text,
   "external_reference" text,
@@ -451,7 +450,7 @@ CREATE TABLE "contracting_releases" (
 
 CREATE TABLE "project_metrics" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "local_id" text NOT NULL,
   "title" text,
   "description" text
@@ -478,7 +477,7 @@ CREATE TABLE "metric_observations" (
 
 CREATE TABLE "project_transactions" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "local_id" text NOT NULL,
   "source" text,
   "date" date,
@@ -493,7 +492,7 @@ CREATE TABLE "project_transactions" (
 
 CREATE TABLE "project_milestones" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "local_id" text NOT NULL,
   "title" text,
   "type" text,
@@ -510,7 +509,7 @@ CREATE TABLE "project_milestones" (
 );
 
 CREATE TABLE "project_completion" (
-  "project_id" text PRIMARY KEY,
+  "project_id" uuid PRIMARY KEY,
   "end_date" date,
   "end_date_details" text,
   "final_scope" text,
@@ -521,7 +520,7 @@ CREATE TABLE "project_completion" (
 
 CREATE TABLE "project_lobbying_meetings" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "local_id" text NOT NULL,
   "meeting_date" timestamp,
   "number_of_participants" integer,
@@ -537,7 +536,7 @@ CREATE TABLE "project_lobbying_meetings" (
 );
 
 CREATE TABLE "project_social" (
-  "project_id" text PRIMARY KEY,
+  "project_id" uuid PRIMARY KEY,
   "in_indigenous_land" boolean,
   "land_compensation_amount" numeric,
   "land_compensation_currency" text,
@@ -545,14 +544,14 @@ CREATE TABLE "project_social" (
 );
 
 CREATE TABLE "social_health_safety_material_tests" (
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "test" text NOT NULL,
   PRIMARY KEY ("project_id", "test")
 );
 
 CREATE TABLE "social_consultation_meetings" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "local_id" text NOT NULL,
   "meeting_date" timestamp,
   "number_of_participants" integer,
@@ -568,7 +567,7 @@ CREATE TABLE "social_consultation_meetings" (
 );
 
 CREATE TABLE "project_environment" (
-  "project_id" text PRIMARY KEY,
+  "project_id" uuid PRIMARY KEY,
   "has_impact_assessment" boolean,
   "in_protected_area" boolean,
   "abatement_cost_amount" numeric,
@@ -576,48 +575,48 @@ CREATE TABLE "project_environment" (
 );
 
 CREATE TABLE "environment_goals" (
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "goal" text NOT NULL,
   PRIMARY KEY ("project_id", "goal")
 );
 
 CREATE TABLE "environment_climate_oversight_types" (
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "oversight_type" text NOT NULL,
   PRIMARY KEY ("project_id", "oversight_type")
 );
 
 CREATE TABLE "environment_conservation_measures" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "type" text,
   "description" text
 );
 
 CREATE TABLE "environment_environmental_measures" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "type" text,
   "description" text
 );
 
 CREATE TABLE "environment_climate_measures" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "type" text,
   "description" text
 );
 
 CREATE TABLE "environment_impact_categories" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "scheme" text,
   "category_id" text
 );
 
 CREATE TABLE "project_benefits" (
   "id" bigserial PRIMARY KEY,
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "title" text,
   "description" text
 );
@@ -627,16 +626,16 @@ CREATE TABLE "benefit_beneficiaries" (
   "benefit_id" bigint NOT NULL,
   "description" text,
   "number_of_people" integer,
-  "location_id" text
+  "location_id" uuid
 );
 
 CREATE TABLE "project_policy_alignment" (
-  "project_id" text PRIMARY KEY,
+  "project_id" uuid PRIMARY KEY,
   "description" text
 );
 
 CREATE TABLE "project_policy_alignment_policies" (
-  "project_id" text NOT NULL,
+  "project_id" uuid NOT NULL,
   "policy" text NOT NULL,
   PRIMARY KEY ("project_id", "policy")
 );
@@ -668,7 +667,7 @@ CREATE TABLE "agency" (
 );
 
 CREATE TABLE "project_asset_lifetime" (
-  "project_id" text PRIMARY KEY,
+  "project_id" uuid PRIMARY KEY,
   "period_start_date" date,
   "period_end_date" date,
   "period_max_extent_date" date,
@@ -1075,3 +1074,5 @@ ALTER TABLE "project_policy_alignment_policies" ADD FOREIGN KEY ("project_id") R
 ALTER TABLE "agency" ADD FOREIGN KEY ("ministry_id") REFERENCES "ministry" ("id");
 
 ALTER TABLE "project_asset_lifetime" ADD FOREIGN KEY ("project_id") REFERENCES "projects" ("id");
+
+

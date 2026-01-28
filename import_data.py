@@ -1,8 +1,20 @@
 import json
-import requests
-import sys
+import logging
+import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
-def import_data():
+from sqlmodel import Session
+from oc4ids_datastore_api.database import engine
+from oc4ids_datastore_api.services import create_project_data
+
+# Setup basic logging
+logging.basicConfig(level=logging.INFO)
+
+def import_data_direct():
     try:
         with open('example.json', 'r') as f:
             data = json.load(f)
@@ -11,20 +23,17 @@ def import_data():
         return
 
     projects = data.get('projects', [])
-    print(f"Found {len(projects)} projects to import.")
+    print(f"Found {len(projects)} projects to import directly into DB.")
 
-    url = 'http://localhost:8000/api/v1/datasets'
-    
-    for i, project in enumerate(projects):
-        print(f"Importing project {i+1}/{len(projects)}: {project.get('id', 'Unknown ID')}")
-        try:
-            response = requests.post(url, json=project)
-            if response.status_code == 200:
-                print(f"Success! Response: {json.dumps(response.json(), indent=2)}")
-            else:
-                print(f"Failed ({response.status_code}): {response.text}")
-        except Exception as e:
-            print(f"Request failed: {e}")
+    with Session(engine) as session:
+        for i, project in enumerate(projects):
+            print(f"Importing project {i+1}/{len(projects)}: {project.get('id', 'Unknown ID')}")
+            try:
+                # Call service function directly
+                result = create_project_data(project, session)
+                print(f"Success! ID: {result['project']['id']}")
+            except Exception as e:
+                print(f"Failed to import project: {e}")
 
 if __name__ == "__main__":
-    import_data()
+    import_data_direct()

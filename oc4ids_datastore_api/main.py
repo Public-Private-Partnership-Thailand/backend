@@ -2,6 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 import logging
+import os
+
+# Try loading .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 from oc4ids_datastore_api.controllers import router
 from oc4ids_datastore_api.exceptions import validation_exception_handler, global_exception_handler

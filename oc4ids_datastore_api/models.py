@@ -1,15 +1,15 @@
 from typing import List, Optional, Dict, Any
 import uuid
-from uuid import uuid4
 from datetime import datetime, date
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Column, JSON
 from sqlalchemy.dialects.postgresql import JSONB
 
-# --- Reference Tables ---
+# ===================================
+# REFERENCE TABLES
+# ===================================
 
 class ProjectType(SQLModel, table=True):
-
     __tablename__ = "project_type"
     id: Optional[int] = Field(default=None, primary_key=True)
     scheme: Optional[str] = None
@@ -42,7 +42,7 @@ class PeriodType(SQLModel, table=True):
     name_th: Optional[str] = None
     description: Optional[str] = None
     sequence: Optional[int] = None
-    is_active: bool = True
+    is_active: bool = Field(default=True)
 
 class Sector(SQLModel, table=True):
     __tablename__ = "sector"
@@ -53,44 +53,47 @@ class Sector(SQLModel, table=True):
     name_en: Optional[str] = None
     category: str
     description: Optional[str] = None
-    is_active: bool = True
+    is_active: bool = Field(default=True)
     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-    # Self reference omitted for brevity, logic handled by ID
-    
+
 class Currency(SQLModel, table=True):
     __tablename__ = "currencies"
     code: str = Field(primary_key=True, max_length=3)
     name: str
     symbol: Optional[str] = None
-    is_active: bool = True
+    is_active: bool = Field(default=True)
 
 class AdditionalClassification(SQLModel, table=True):
     __tablename__ = "additional_classifications"
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: Optional[int] = Field(default=None, primary_key=True) # BigSerial in SQL -> int in Python
     scheme: str
     code: str
     description: Optional[str] = None
     uri: Optional[str] = None
 
-# --- Link Tables ---
+# ===================================
+# LINK TABLES
+# ===================================
 
 class ProjectSectorLink(SQLModel, table=True):
     __tablename__ = "project_sector"
-    project_id: str = Field(foreign_key="projects.id", primary_key=True)
+    project_id: uuid.UUID = Field(foreign_key="projects.id", primary_key=True)
     sector_id: int = Field(foreign_key="sector.id", primary_key=True)
 
 class ProjectAdditionalClassificationLink(SQLModel, table=True):
     __tablename__ = "project_additional_classifications"
-    project_id: str = Field(foreign_key="projects.id", primary_key=True)
+    project_id: uuid.UUID = Field(foreign_key="projects.id", primary_key=True)
     classification_id: int = Field(foreign_key="additional_classifications.id", primary_key=True)
 
-# --- Child Tables ---
+# ===================================
+# CHILD TABLES
+# ===================================
 
 class ProjectIdentifier(SQLModel, table=True):
     __tablename__ = "project_identifiers"
     id: Optional[int] = Field(default=None, primary_key=True)
-    project_id: str = Field(foreign_key="projects.id")
+    project_id: uuid.UUID = Field(foreign_key="projects.id")
     identifier_value: str
     scheme: Optional[str] = None
     project: "Project" = Relationship(back_populates="identifiers_list")
@@ -98,7 +101,7 @@ class ProjectIdentifier(SQLModel, table=True):
 class ProjectPeriod(SQLModel, table=True):
     __tablename__ = "project_periods"
     id: Optional[int] = Field(default=None, primary_key=True)
-    project_id: str = Field(foreign_key="projects.id")
+    project_id: uuid.UUID = Field(foreign_key="projects.id")
     period_type: str = Field(foreign_key="period_types.code")
     start_date: Optional[date] = None
     end_date: Optional[date] = None
@@ -108,8 +111,8 @@ class ProjectPeriod(SQLModel, table=True):
 
 class ProjectLocation(SQLModel, table=True):
     __tablename__ = "project_locations"
-    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    project_id: str = Field(foreign_key="projects.id")
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    project_id: uuid.UUID = Field(foreign_key="projects.id")
     description: Optional[str] = None
     uri: Optional[str] = None
     geometry_type: Optional[str] = None
@@ -124,7 +127,7 @@ class ProjectLocation(SQLModel, table=True):
 class ProjectDocument(SQLModel, table=True):
     __tablename__ = "project_documents"
     id: Optional[int] = Field(default=None, primary_key=True)
-    project_id: str = Field(foreign_key="projects.id")
+    project_id: uuid.UUID = Field(foreign_key="projects.id")
     local_id: str
     document_type: Optional[str] = None
     title: Optional[str] = None
@@ -143,7 +146,7 @@ class ProjectDocument(SQLModel, table=True):
 class ProjectBudget(SQLModel, table=True):
     __tablename__ = "project_budgets"
     id: Optional[int] = Field(default=None, primary_key=True)
-    project_id: str = Field(foreign_key="projects.id") # Unique in DB
+    project_id: uuid.UUID = Field(foreign_key="projects.id")
     description: Optional[str] = None
     total_amount: Optional[float] = None
     currency: Optional[str] = None
@@ -154,34 +157,68 @@ class ProjectBudget(SQLModel, table=True):
 class ProjectParty(SQLModel, table=True):
     __tablename__ = "project_parties"
     id: Optional[int] = Field(default=None, primary_key=True)
-    project_id: str = Field(foreign_key="projects.id")
+    project_id: uuid.UUID = Field(foreign_key="projects.id")
     local_id: str
     name: Optional[str] = None
     identifier_scheme: Optional[str] = None
     identifier_value: Optional[str] = None
+    identifier_legal_name_id: Optional[int] = Field(default=None, foreign_key="ministry.id")
+    ministry: Optional["Ministry"] = Relationship()
     identifier_uri: Optional[str] = None
-    # Contact info omitted for brevity but can be added
+    
+    # Address (Embedded)
+    street_address: Optional[str] = None
+    locality: Optional[str] = None
+    region: Optional[str] = None
+    postal_code: Optional[str] = None
+    country_name: Optional[str] = None
+    
+    # Contact (Embedded)
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_telephone: Optional[str] = None
+    contact_fax: Optional[str] = None
+    contact_url: Optional[str] = None
+
     project: "Project" = Relationship(back_populates="parties_list")
+
+class PartyRole(SQLModel, table=True):
+    __tablename__ = "party_roles"
+    party_id: int = Field(foreign_key="project_parties.id", primary_key=True)
+    role: str = Field(primary_key=True)
 
 class ProjectContractingProcess(SQLModel, table=True):
     __tablename__ = "project_contracting_processes"
     id: Optional[int] = Field(default=None, primary_key=True)
-    project_id: str = Field(foreign_key="projects.id")
+    project_id: uuid.UUID = Field(foreign_key="projects.id")
     local_id: str
+    
+    # Summary
     ocid: Optional[str] = None
+    external_reference: Optional[str] = None
     title: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
+    nature: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
+    
+    # Values
     contract_amount: Optional[float] = None
     contract_currency: Optional[str] = None
+    final_amount: Optional[float] = None
+    final_currency: Optional[str] = None
+    
+    # Periods
     period_start_date: Optional[date] = None
     period_end_date: Optional[date] = None
+    period_max_extent_date: Optional[date] = None
+    period_duration_days: Optional[int] = None
+    
     project: "Project" = Relationship(back_populates="contracting_processes")
 
 class ProjectRelatedProject(SQLModel, table=True):
     __tablename__ = "project_related_projects"
-    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    project_id: str = Field(foreign_key="projects.id")
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    project_id: uuid.UUID = Field(foreign_key="projects.id")
     relationship_id: str
     scheme: Optional[str] = None
     identifier: str
@@ -190,12 +227,14 @@ class ProjectRelatedProject(SQLModel, table=True):
     uri: Optional[str] = None
     project: "Project" = Relationship(back_populates="related_projects")
 
-# --- Main Project Model ---
+# ===================================
+# MAIN PROJECT MODEL
+# ===================================
 
 class Project(SQLModel, table=True):
     __tablename__ = "projects"
     
-    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     title: str
     description: Optional[str] = None
     status: Optional[str] = None
@@ -205,16 +244,16 @@ class Project(SQLModel, table=True):
     public_authority_id: Optional[int] = Field(default=None, foreign_key="agency.id")
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    created_by: Optional[str] = None
+    created_by: Optional[uuid.UUID] = None
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_by: Optional[str] = None
+    updated_by: Optional[uuid.UUID] = None
     deleted_at: Optional[datetime] = None
-    raw_data: Optional[str] = Field(default=None)
     
     # Relationships
     project_type: Optional["ProjectType"] = Relationship()
     public_authority: Optional["Agency"] = Relationship()
-
+    
+    # Children
     identifiers_list: List["ProjectIdentifier"] = Relationship(back_populates="project")
     periods: List["ProjectPeriod"] = Relationship(back_populates="project")
     locations_list: List["ProjectLocation"] = Relationship(back_populates="project")
@@ -224,5 +263,6 @@ class Project(SQLModel, table=True):
     contracting_processes: List["ProjectContractingProcess"] = Relationship(back_populates="project")
     related_projects: List["ProjectRelatedProject"] = Relationship(back_populates="project")
     
+    # Many-to-Many
     sectors: List["Sector"] = Relationship(link_model=ProjectSectorLink)
     additional_classifications: List["AdditionalClassification"] = Relationship(link_model=ProjectAdditionalClassificationLink)

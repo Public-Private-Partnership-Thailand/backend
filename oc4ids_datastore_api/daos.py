@@ -1,7 +1,7 @@
 from typing import List, Optional
 import uuid
 from sqlmodel import Session, select, func
-from oc4ids_datastore_api.models import Project
+from oc4ids_datastore_api.models import Project, Ministry, Agency, ProjectParty
 
 class ProjectDAO:
     def __init__(self, session: Session):
@@ -12,6 +12,23 @@ class ProjectDAO:
 
     def get_all(self, skip: int = 0, limit: int = 100) -> List[Project]:
         return self.session.exec(select(Project).offset(skip).limit(limit)).all()
+
+    def get_summaries(self, skip: int = 0, limit: int = 20):
+        statement = (
+            select(
+                Project.id,
+                Project.title,
+                Agency.name_th.label("agency_name"),
+                func.string_agg(Ministry.name_th, ', ').label("ministry_names")
+            )
+            .join(Agency, Project.public_authority_id == Agency.id, isouter=True)
+            .join(ProjectParty, Project.id == ProjectParty.project_id, isouter=True)
+            .join(Ministry, ProjectParty.identifier_legal_name_id == Ministry.id, isouter=True)
+            .group_by(Project.id, Project.title, Agency.name_th)
+            .offset(skip)
+            .limit(limit)
+        )
+        return self.session.exec(statement).all()
 
     def count(self) -> int:
         return self.session.exec(select(func.count()).select_from(Project)).one()
