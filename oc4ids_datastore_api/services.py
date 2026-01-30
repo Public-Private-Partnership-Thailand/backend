@@ -813,7 +813,7 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
     
     return {
         "sector": [
-            {"id": s.code, "value": s.name_th}
+            {"id": s.id, "value": s.name_th}
             for s in sectors
         ],
         "ministry": [
