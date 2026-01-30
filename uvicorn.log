@@ -1,9 +1,11 @@
 nohup: ignoring input
-INFO:     Started server process [745944]
+INFO:     Started server process [769695]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/info - Status: 200 - Time: 389.87ms
-INFO:     127.0.0.1:39448 - "GET /api/v1/info HTTP/1.1" 200 OK
-INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/info - Status: 200 - Time: 13.02ms
-INFO:     127.0.0.1:39452 - "GET /api/v1/info HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 127.27ms
+INFO:     127.0.0.1:46980 - "GET /api/v1/projects?agency_id=1 HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 5.02ms
+INFO:     127.0.0.1:39252 - "GET /api/v1/projects?agency_id=1&agency_id=2&agency_id=3 HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 5.74ms
+INFO:     127.0.0.1:42500 - "GET /api/v1/projects?agency_id=0 HTTP/1.1" 200 OK

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Body
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Body, Query
 from sqlmodel import Session
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import json
 import pandas as pd
 from io import BytesIO
@@ -20,11 +20,29 @@ router = APIRouter()
 @router.get("/projects")
 def read_projects(
     page: int = 1, 
-    page_size: int = 20, 
+    page_size: int = 20,
+    title: Optional[str] = None,
+    sector_id: Optional[List[int]] = Query(None),
+    ministry_id: Optional[List[int]] = Query(None),
+    agency_id: Optional[List[int]] = Query(None),
+    concession_form: Optional[str] = None,
+    year_from: Optional[int] = None,
+    year_to: Optional[int] = None,
     session: Session = Depends(get_session)
 ) -> Dict[str, Any]:
-    """Get all projects with pagination"""
-    return get_all_projects_summary(session, page, page_size)
+    """Get all projects with pagination and filters (supports multiple IDs)"""
+    return get_all_projects_summary(
+        session, 
+        page, 
+        page_size,
+        title=title,
+        sector_id=sector_id,
+        ministry_id=ministry_id,
+        agency_id=agency_id,
+        concession_form=concession_form,
+        year_from=year_from,
+        year_to=year_to
+    )
 
 
 @router.get("/projects/{project_id}")

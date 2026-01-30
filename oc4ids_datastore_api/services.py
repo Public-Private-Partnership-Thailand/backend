@@ -309,12 +309,33 @@ def _create_completion(session: Session, project_id: uuid.UUID, data: Dict):
 
 # --- Service Functions ---
 
-def get_all_projects_summary(session: Session, page: int = 1, page_size: int = 20) -> Dict[str, Any]:
+def get_all_projects_summary(
+    session: Session, 
+    page: int = 1, 
+    page_size: int = 20,
+    title: Optional[str] = None,
+    sector_id: Optional[List[int]] = None,
+    ministry_id: Optional[List[int]] = None,
+    agency_id: Optional[List[int]] = None,
+    concession_form: Optional[str] = None,
+    year_from: Optional[int] = None,
+    year_to: Optional[int] = None
+) -> Dict[str, Any]:
     """Get project summaries for the list view (Optimized)"""
     dao = ProjectDAO(session)
     skip = (page - 1) * page_size
     
-    results = dao.get_summaries(skip=skip, limit=page_size)
+    results = dao.get_summaries(
+        skip=skip, 
+        limit=page_size,
+        title=title,
+        sector_id=sector_id,
+        ministry_id=ministry_id,
+        agency_id=agency_id,
+        concession_form=concession_form,
+        year_from=year_from,
+        year_to=year_to
+    )
     total = dao.count()
     
     data = []

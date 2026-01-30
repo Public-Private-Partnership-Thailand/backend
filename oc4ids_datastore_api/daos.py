@@ -13,8 +13,20 @@ class ProjectDAO:
     #def get_all(self, skip: int = 0, limit: int = 100) -> List[Project]:
     #    return self.session.exec(select(Project).offset(skip).limit(limit)).all()
 
-    def get_summaries(self, skip: int = 0, limit: int = 20):
+    def get_summaries(
+        self, 
+        skip: int = 0, 
+        limit: int = 20,
+        title: Optional[str] = None,
+        sector_id: Optional[List[int]] = None,
+        ministry_id: Optional[List[int]] = None,
+        agency_id: Optional[List[int]] = None,
+        concession_form: Optional[str] = None,
+        year_from: Optional[int] = None,
+        year_to: Optional[int] = None
+    ):
         from sqlalchemy.orm import aliased
+        from oc4ids_datastore_api.models import ProjectSectorLink, ProjectPeriod
         PartyAgency = aliased(Agency)
 
         statement = (
@@ -30,10 +42,42 @@ class ProjectDAO:
             .join(PartyAdditionalIdentifier, ProjectParty.id == PartyAdditionalIdentifier.party_id, isouter=True)
             .join(Ministry, PartyAdditionalIdentifier.legal_name_id == Ministry.id, isouter=True)
             .join(PartyAgency, ProjectParty.identifier_legal_name_id == PartyAgency.id, isouter=True)
-            .group_by(Project.id, Project.title, Agency.name_en)
-            .offset(skip)
-            .limit(limit)
         )
+        
+        # Apply filters
+        if title:
+            statement = statement.where(Project.title.ilike(f"%{title}%"))
+        
+        if sector_id:
+            statement = statement.join(
+                ProjectSectorLink, 
+                Project.id == ProjectSectorLink.project_id, 
+                isouter=False
+            ).where(ProjectSectorLink.sector_id.in_(sector_id))
+        
+        if ministry_id:
+            statement = statement.where(Ministry.id.in_(ministry_id))
+        
+        if agency_id:
+            statement = statement.where(Project.public_authority_id.in_(agency_id))
+        
+        if year_from or year_to:
+            statement = statement.join(
+                ProjectPeriod,
+                Project.id == ProjectPeriod.project_id,
+                isouter=False
+            )
+            if year_from:
+                statement = statement.where(
+                    func.extract('year', ProjectPeriod.start_date) >= year_from
+                )
+            if year_to:
+                statement = statement.where(
+                    func.extract('year', ProjectPeriod.end_date) <= year_to
+                )
+        
+        statement = statement.group_by(Project.id, Project.title, Agency.name_en).offset(skip).limit(limit)
+        
         return self.session.exec(statement).all()
 
     def count(self) -> int:
