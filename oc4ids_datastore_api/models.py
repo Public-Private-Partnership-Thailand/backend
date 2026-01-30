@@ -123,6 +123,7 @@ class ProjectLocation(SQLModel, table=True):
     postal_code: Optional[str] = None
     country_name: Optional[str] = None
     project: "Project" = Relationship(back_populates="locations_list")
+    gazetteer: Optional["LocationGazetteer"] = Relationship(back_populates="location", sa_relationship_kwargs={"uselist": False}) # Link to gazetteer table (1-to-1 usually)
 
 class ProjectDocument(SQLModel, table=True):
     __tablename__ = "project_documents"
@@ -153,7 +154,7 @@ class ProjectBudget(SQLModel, table=True):
     request_date: Optional[datetime] = Field(default=None, sa_column=Column(Date))
     approval_date: Optional[datetime] = Field(default=None, sa_column=Column(Date))
     
-    project: "Project" = Relationship(back_populates="budget")
+    project: "Project" = Relationship(back_populates="budget", sa_relationship_kwargs={"uselist": False})
     breakdowns: List["BudgetBreakdown"] = Relationship(back_populates="budget")
     finances: List["ProjectFinance"] = Relationship(back_populates="budget")
 
@@ -235,6 +236,10 @@ class ProjectParty(SQLModel, table=True):
 
     project: "Project" = Relationship(back_populates="parties_list")
     additional_identifiers: List["PartyAdditionalIdentifier"] = Relationship(back_populates="party")
+    roles: List["PartyRole"] = Relationship() # No back_populate needed for simple link table usually
+    people: List["PartyPerson"] = Relationship()
+    beneficial_owners: List["PartyBeneficialOwner"] = Relationship()
+    classifications: List["PartyClassification"] = Relationship()
 
 class PartyAdditionalIdentifier(SQLModel, table=True):
     __tablename__ = "party_additional_identifiers"
@@ -252,6 +257,46 @@ class PartyRole(SQLModel, table=True):
     __tablename__ = "party_roles"
     party_id: int = Field(foreign_key="project_parties.id", primary_key=True)
     role: str = Field(primary_key=True)
+
+class PartyPerson(SQLModel, table=True):
+    __tablename__ = "party_people"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    party_id: int = Field(foreign_key="project_parties.id")
+    local_id: str
+    name: Optional[str] = None
+    job_title: Optional[str] = None
+
+class PartyBeneficialOwner(SQLModel, table=True):
+    __tablename__ = "party_beneficial_owners"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    party_id: int = Field(foreign_key="project_parties.id")
+    local_id: str
+    name: Optional[str] = None
+    email: Optional[str] = None
+    telephone: Optional[str] = None
+    fax_number: Optional[str] = None
+    identifier_scheme: Optional[str] = None
+    identifier_value: Optional[str] = None
+    street_address: Optional[str] = None
+    locality: Optional[str] = None
+    region: Optional[str] = None
+    postal_code: Optional[str] = None
+    country_name: Optional[str] = None
+    
+    nationalities: List["BeneficialOwnerNationality"] = Relationship(back_populates="owner")
+
+class BeneficialOwnerNationality(SQLModel, table=True):
+    __tablename__ = "beneficial_owner_nationalities"
+    owner_id: int = Field(foreign_key="party_beneficial_owners.id", primary_key=True)
+    nationality: str = Field(primary_key=True)
+    
+    owner: "PartyBeneficialOwner" = Relationship(back_populates="nationalities")
+
+class PartyClassification(SQLModel, table=True):
+    __tablename__ = "party_classifications"
+    party_id: int = Field(foreign_key="project_parties.id", primary_key=True)
+    scheme: str = Field(primary_key=True)
+    classification_id: str = Field(primary_key=True)
 
 class ProjectContractingProcess(SQLModel, table=True):
     __tablename__ = "project_contracting_processes"
@@ -286,6 +331,11 @@ class ProjectContractingProcess(SQLModel, table=True):
     transactions: List["ContractingProcessTransaction"] = Relationship(back_populates="contracting_process")
     modifications: List["ContractingProcessModification"] = Relationship(back_populates="contracting_process")
     documents: List["ContractingProcessDocument"] = Relationship(back_populates="contracting_process")
+    
+    tender: Optional["ContractingTender"] = Relationship(back_populates="contracting_process", sa_relationship_kwargs={"uselist": False})
+    suppliers: List["ContractingSupplier"] = Relationship(back_populates="contracting_process")
+    social: Optional["ContractingSocial"] = Relationship(back_populates="contracting_process", sa_relationship_kwargs={"uselist": False})
+    releases: List["ContractingRelease"] = Relationship(back_populates="contracting_process")
 
 class ContractingProcessMilestone(SQLModel, table=True):
     __tablename__ = "contracting_milestones" # Corrected table name from SQL
@@ -304,6 +354,77 @@ class ContractingProcessMilestone(SQLModel, table=True):
     value_currency: Optional[str] = None
     
     contracting_process: "ProjectContractingProcess" = Relationship(back_populates="milestones")
+
+class ContractingTender(SQLModel, table=True):
+    __tablename__ = "contracting_tenders"
+    process_id: int = Field(foreign_key="project_contracting_processes.id", primary_key=True)
+    procurement_method: Optional[str] = None
+    procurement_method_details: Optional[str] = None
+    date_published: Optional[datetime] = Field(default=None, sa_column=Column(Date))
+    cost_estimate_amount: Optional[float] = None
+    cost_estimate_currency: Optional[str] = None
+    number_of_tenderers: Optional[int] = None
+    
+    contracting_process: "ProjectContractingProcess" = Relationship(back_populates="tender")
+    tenderers: List["ContractingTenderTenderer"] = Relationship(back_populates="tender")
+    tender_entities: List["ContractingTenderEntity"] = Relationship(back_populates="tender")
+    sustainability: List["ContractingTenderSustainability"] = Relationship(back_populates="tender")
+
+class ContractingTenderTenderer(SQLModel, table=True):
+    __tablename__ = "contracting_tender_tenderers"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    process_id: int = Field(foreign_key="contracting_tenders.process_id")
+    local_id: str
+    name: Optional[str] = None
+    
+    tender: "ContractingTender" = Relationship(back_populates="tenderers")
+
+class ContractingTenderEntity(SQLModel, table=True):
+    __tablename__ = "contracting_tender_entities"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    process_id: int = Field(foreign_key="contracting_tenders.process_id")
+    role: Optional[str] = None
+    name: Optional[str] = None
+    
+    tender: "ContractingTender" = Relationship(back_populates="tender_entities")
+
+class ContractingTenderSustainability(SQLModel, table=True):
+    __tablename__ = "contracting_tender_sustainability"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    process_id: int = Field(foreign_key="contracting_tenders.process_id")
+    strategies: Optional[List[dict]] = Field(default=None, sa_column=Column(JSONB))
+    
+    tender: "ContractingTender" = Relationship(back_populates="sustainability")
+
+class ContractingSupplier(SQLModel, table=True):
+    __tablename__ = "contracting_suppliers"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    process_id: int = Field(foreign_key="project_contracting_processes.id")
+    local_id: str
+    name: Optional[str] = None
+    
+    contracting_process: "ProjectContractingProcess" = Relationship(back_populates="suppliers")
+
+class ContractingSocial(SQLModel, table=True):
+    __tablename__ = "contracting_social"
+    process_id: int = Field(foreign_key="project_contracting_processes.id", primary_key=True)
+    labor_budget_amount: Optional[float] = None
+    labor_budget_currency: Optional[str] = None
+    labor_obligations: Optional[List[dict]] = Field(default=None, sa_column=Column(JSONB))
+    labor_description: Optional[str] = None
+    
+    contracting_process: "ProjectContractingProcess" = Relationship(back_populates="social")
+
+class ContractingRelease(SQLModel, table=True):
+    __tablename__ = "contracting_releases"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    process_id: int = Field(foreign_key="project_contracting_processes.id")
+    local_id: str
+    tag: Optional[List[str]] = Field(default=None, sa_column=Column(JSONB))
+    date: Optional[datetime] = Field(default=None, sa_column=Column(Date))
+    url: Optional[str] = None
+    
+    contracting_process: "ProjectContractingProcess" = Relationship(back_populates="releases")
 
 class ContractingProcessTransaction(SQLModel, table=True):
     __tablename__ = "contracting_transactions" # Corrected table name
@@ -472,6 +593,69 @@ class MetricObservation(SQLModel, table=True):
     
     metric: "ProjectMetric" = Relationship(back_populates="observations")
 
+class LocationGazetteer(SQLModel, table=True):
+    __tablename__ = "location_gazetteers"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    location_id: uuid.UUID = Field(foreign_key="project_locations.id")
+    scheme: str 
+    
+    identifiers: List["LocationGazetteerIdentifier"] = Relationship(back_populates="gazetteer")
+    location: "ProjectLocation" = Relationship(back_populates="gazetteer")
+
+class LocationGazetteerIdentifier(SQLModel, table=True):
+    __tablename__ = "location_gazetteer_identifiers"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    gazetteer_id: int = Field(foreign_key="location_gazetteers.id")
+    identifier: str
+    
+    gazetteer: "LocationGazetteer" = Relationship(back_populates="identifiers")
+
+class ProjectLobbyingMeeting(SQLModel, table=True):
+    __tablename__ = "project_lobbying_meetings"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    project_id: uuid.UUID = Field(foreign_key="projects.id")
+    local_id: str
+    meeting_date: Optional[datetime] = Field(default=None, sa_column=Column(Date))
+    number_of_participants: Optional[int] = None
+    
+    street_address: Optional[str] = None
+    locality: Optional[str] = None
+    region: Optional[str] = None
+    postal_code: Optional[str] = None
+    country_name: Optional[str] = None
+    
+    public_office_job_title: Optional[str] = None
+    public_office_person_name: Optional[str] = None
+    public_office_org_id: Optional[str] = None
+    public_office_org_name: Optional[str] = None
+    
+    project: "Project" = Relationship(back_populates="lobbying_meetings")
+
+class ProjectPolicyAlignment(SQLModel, table=True):
+    __tablename__ = "project_policy_alignment"
+    project_id: uuid.UUID = Field(foreign_key="projects.id", primary_key=True)
+    description: Optional[str] = None
+    
+    project: "Project" = Relationship(back_populates="policy_alignment")
+    policies: List["ProjectPolicyAlignmentPolicy"] = Relationship(back_populates="policy_alignment")
+
+class ProjectPolicyAlignmentPolicy(SQLModel, table=True):
+    __tablename__ = "project_policy_alignment_policies"
+    project_id: uuid.UUID = Field(foreign_key="project_policy_alignment.project_id", primary_key=True)
+    policy: str = Field(primary_key=True)
+    
+    policy_alignment: "ProjectPolicyAlignment" = Relationship(back_populates="policies")
+
+class ProjectAssetLifetime(SQLModel, table=True):
+    __tablename__ = "project_asset_lifetime"
+    project_id: uuid.UUID = Field(foreign_key="projects.id", primary_key=True)
+    period_start_date: Optional[datetime] = Field(default=None, sa_column=Column(Date))
+    period_end_date: Optional[datetime] = Field(default=None, sa_column=Column(Date))
+    period_max_extent_date: Optional[datetime] = Field(default=None, sa_column=Column(Date))
+    period_duration_days: Optional[int] = None
+    
+    project: "Project" = Relationship(back_populates="asset_lifetime")
+
 # ===================================
 # SOCIAL & ENVIRONMENT & BENEFITS
 # ===================================
@@ -610,24 +794,6 @@ class ProjectCompletion(SQLModel, table=True):
     
     project: "Project" = Relationship(back_populates="completion")
 
-class ProjectLobbyingMeeting(SQLModel, table=True):
-    __tablename__ = "project_lobbying_meetings"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    project_id: uuid.UUID = Field(foreign_key="projects.id")
-    local_id: str
-    meeting_date: Optional[datetime] = None
-    number_of_participants: Optional[int] = None
-    street_address: Optional[str] = None
-    locality: Optional[str] = None
-    region: Optional[str] = None
-    postal_code: Optional[str] = None
-    country_name: Optional[str] = None
-    public_office_job_title: Optional[str] = None
-    public_office_person_name: Optional[str] = None
-    public_office_org_id: Optional[str] = None
-    public_office_org_name: Optional[str] = None
-    
-    project: "Project" = Relationship(back_populates="lobbying_meetings")
 
 # ===================================
 # MAIN PROJECT MODEL
@@ -675,6 +841,8 @@ class Project(SQLModel, table=True):
     benefits: List["ProjectBenefit"] = Relationship(back_populates="project")
     completion: Optional["ProjectCompletion"] = Relationship(back_populates="project")
     lobbying_meetings: List["ProjectLobbyingMeeting"] = Relationship(back_populates="project")
+    policy_alignment: Optional["ProjectPolicyAlignment"] = Relationship(back_populates="project")
+    asset_lifetime: Optional["ProjectAssetLifetime"] = Relationship(back_populates="project")
 
     # Many-to-Many
     sectors: List["Sector"] = Relationship(link_model=ProjectSectorLink)
@@ -722,7 +890,15 @@ class Project(SQLModel, table=True):
                         "region": loc.region,
                         "postalCode": loc.postal_code,
                         "countryName": loc.country_name
-                    }
+                    },
+                    "gazetteers": [
+                        {
+                            "scheme": loc.gazetteer.scheme,
+                            "identifiers": [
+                                i.identifier for i in loc.gazetteer.identifiers
+                            ]
+                        }
+                    ] if loc.gazetteer else []
                 } 
                 for loc in self.locations_list
             ],
@@ -732,6 +908,7 @@ class Project(SQLModel, table=True):
                 {
                     "id": p.local_id,
                     "name": p.name,
+                    "roles": [r.role for r in p.roles],
                     "identifier": {
                         "scheme": p.identifier_scheme,
                         "id": p.identifier_value,
@@ -760,6 +937,40 @@ class Project(SQLModel, table=True):
                             "uri": ai.uri
                         }
                         for ai in p.additional_identifiers
+                    ],
+                    "persons": [
+                        {
+                            "id": pp.local_id,
+                            "name": pp.name,
+                            "jobTitle": pp.job_title
+                        } for pp in p.people
+                    ],
+                    "beneficialOwners": [
+                         {
+                             "id": bo.local_id,
+                             "name": bo.name,
+                             "email": bo.email,
+                             "telephone": bo.telephone,
+                             "faxNumber": bo.fax_number,
+                             "identifier": {
+                                 "scheme": bo.identifier_scheme,
+                                 "id": bo.identifier_value
+                             },
+                             "address": {
+                                 "streetAddress": bo.street_address,
+                                 "locality": bo.locality,
+                                 "region": bo.region,
+                                 "postalCode": bo.postal_code,
+                                 "countryName": bo.country_name
+                             },
+                             "nationalities": [n.nationality for n in bo.nationalities]
+                         } for bo in p.beneficial_owners
+                    ],
+                    "classifications": [
+                        {
+                             "scheme": pc.scheme,
+                             "id": pc.classification_id
+                        } for pc in p.classifications
                     ]
                 }
                 for p in self.parties_list
@@ -784,6 +995,52 @@ class Project(SQLModel, table=True):
                             "endDate": cp.period_end_date.isoformat() if cp.period_end_date else None,
                             "durationInDays": cp.period_duration_days
                         },
+                        "tender": {
+                            "procurementMethod": cp.tender.procurement_method,
+                            "procurementMethodDetails": cp.tender.procurement_method_details,
+                            "datePublished": cp.tender.date_published.isoformat() if cp.tender.date_published else None,
+                            "numberOfTenderers": cp.tender.number_of_tenderers,
+                            "value": {
+                                "amount": cp.tender.cost_estimate_amount,
+                                "currency": cp.tender.cost_estimate_currency
+                            } if cp.tender else None,
+                            "tenderers": [
+                                {
+                                    "id": t.local_id,
+                                    "name": t.name
+                                } for t in cp.tender.tenderers
+                            ] if cp.tender else [],
+                            "procuringEntity": [
+                                {
+                                    "name": e.name
+                                } for e in cp.tender.tender_entities if e.role == "procuringEntity"
+                            ][0] if cp.tender and any(e.role == "procuringEntity" for e in cp.tender.tender_entities) else None,
+                            "sustainability": [
+                                s.strategies for s in cp.tender.sustainability
+                            ] if cp.tender else []
+                        } if cp.tender else None,
+                        "suppliers": [
+                            {
+                                "id": s.local_id,
+                                "name": s.name
+                            } for s in cp.suppliers
+                        ],
+                        "social": {
+                             "description": cp.social.labor_description,
+                             "laborObligations": cp.social.labor_obligations,
+                             "laborBudget": {
+                                 "amount": cp.social.labor_budget_amount,
+                                 "currency": cp.social.labor_budget_currency
+                             }
+                        } if cp.social else None,
+                        "releases": [
+                            {
+                                "id": r.local_id,
+                                "date": r.date.isoformat() if r.date else None,
+                                "tag": r.tag,
+                                "url": r.url
+                            } for r in cp.releases
+                        ],
                         "milestones": [
                             {
                                 "id": m.local_id,
@@ -893,6 +1150,33 @@ class Project(SQLModel, table=True):
                             } for item in bd.items
                         ]
                     } for bd in self.budget.breakdowns
+                ],
+                "finance": [
+                    {
+                        "id": fin.local_id,
+                        "description": fin.description,
+                        "assetClass": fin.asset_class,
+                        "type": fin.type,
+                        "concessional": fin.concessional,
+                        "value": {
+                            "amount": fin.value_amount,
+                            "currency": fin.value_currency
+                        },
+                        "source": fin.source,
+                        "financingParty": {
+                            "name": fin.financing_party_name,
+                            "id": fin.financing_party_id
+                        },
+                        "interestRateMargin": fin.interest_rate_margin,
+                        "period": {
+                             "startDate": fin.period_start_date.isoformat() if fin.period_start_date else None,
+                             "endDate": fin.period_end_date.isoformat() if fin.period_end_date else None
+                        },
+                        "paymentPeriod": {
+                             "startDate": fin.payment_period_start_date.isoformat() if fin.payment_period_start_date else None,
+                             "endDate": fin.payment_period_end_date.isoformat() if fin.payment_period_end_date else None
+                        }
+                    } for fin in self.budget.finances
                 ]
             } if self.budget else None,
             
@@ -1085,13 +1369,52 @@ class Project(SQLModel, table=True):
             
             # Completion
             "completion": {
-                 "endDate": self.completion.end_date.isoformat() if self.completion.end_date else None,
+                 "endDate": self.completion.end_date.isoformat() if self.completion and self.completion.end_date else None,
                  "finalScope": self.completion.final_scope,
                  "finalValue": {
                      "amount": self.completion.final_value_amount,
                      "currency": self.completion.final_value_currency
-                 }
-            } if self.completion else None
+                 } if self.completion and self.completion.final_value_amount is not None else None
+            } if self.completion else None,
+
+            # Lobbying
+            "lobbyingMeetings": [
+                {
+                    "id": lb.local_id,
+                    "date": lb.meeting_date.isoformat() if lb.meeting_date else None,
+                    "numberOfParticipants": lb.number_of_participants,
+                    "address": {
+                        "streetAddress": lb.street_address,
+                        "locality": lb.locality,
+                        "region": lb.region,
+                        "postalCode": lb.postal_code,
+                        "countryName": lb.country_name
+                    },
+                    "publicOffice": {
+                        "name": lb.public_office_person_name,
+                        "jobTitle": lb.public_office_job_title,
+                        "organization": {
+                            "name": lb.public_office_org_name,
+                            "id": lb.public_office_org_id,
+                        }
+                    }
+                } for lb in self.lobbying_meetings
+            ],
+
+            # Policy Alignment
+            "policyAlignment": {
+                "policies": [p.policy for p in self.policy_alignment.policies],
+                "description": self.policy_alignment.description 
+            } if self.policy_alignment else None,
+
+            # Asset Lifetime
+            "assetLifetime": {
+                "startDate": self.asset_lifetime.period_start_date.isoformat() if self.asset_lifetime.period_start_date else None,
+                "endDate": self.asset_lifetime.period_end_date.isoformat() if self.asset_lifetime.period_end_date else None,
+                "maxExtentDate": self.asset_lifetime.period_max_extent_date.isoformat() if self.asset_lifetime.period_max_extent_date else None,
+                "durationInDays": self.asset_lifetime.period_duration_days
+            } if self.asset_lifetime else None
+
 
         }
         

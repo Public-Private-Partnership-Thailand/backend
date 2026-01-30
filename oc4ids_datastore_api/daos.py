@@ -144,10 +144,10 @@ class ProjectDAO:
             "DELETE FROM party_classifications WHERE party_id IN (SELECT id FROM project_parties WHERE project_id = :project_id)",
             
             # Contracting processes
-            "DELETE FROM contracting_tenders WHERE process_id IN (SELECT id FROM project_contracting_processes WHERE project_id = :project_id)",
             "DELETE FROM contracting_tender_tenderers WHERE process_id IN (SELECT id FROM project_contracting_processes WHERE project_id = :project_id)",
             "DELETE FROM contracting_tender_entities WHERE process_id IN (SELECT id FROM project_contracting_processes WHERE project_id = :project_id)",
             "DELETE FROM contracting_tender_sustainability WHERE process_id IN (SELECT id FROM project_contracting_processes WHERE project_id = :project_id)",
+            "DELETE FROM contracting_tenders WHERE process_id IN (SELECT id FROM project_contracting_processes WHERE project_id = :project_id)",
             "DELETE FROM contracting_suppliers WHERE process_id IN (SELECT id FROM project_contracting_processes WHERE project_id = :project_id)",
             "DELETE FROM contracting_documents WHERE process_id IN (SELECT id FROM project_contracting_processes WHERE project_id = :project_id)",
             "DELETE FROM contracting_modifications WHERE process_id IN (SELECT id FROM project_contracting_processes WHERE project_id = :project_id)",
