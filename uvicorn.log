@@ -1,21 +1,9 @@
 nohup: ignoring input
-INFO:     Started server process [664371]
+INFO:     Started server process [737018]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/debug/reset-db - Status: 200 - Time: 253.37ms
-INFO:     127.0.0.1:58072 - "GET /api/debug/reset-db HTTP/1.1" 200 OK
-WARNING:oc4ids_datastore_api.services:Project ID 'oc4ids-bu3kcz-m75-junctions-4-to-5-smart-motorway' is not a valid UUID. Generated new ID: 95f8c43d-0943-43aa-aa68-6fa814af37d9
-INFO:oc4ids_datastore_api.services:Creating project 95f8c43d-0943-43aa-aa68-6fa814af37d9
-INFO:oc4ids_datastore_api.middleware:PERFORMANCE: POST /api/v1/upload - Status: 200 - Time: 23161.56ms
-INFO:     127.0.0.1:58086 - "POST /api/v1/upload HTTP/1.1" 200 OK
-INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 13.19ms
-INFO:     127.0.0.1:46156 - "GET /api/v1/projects HTTP/1.1" 200 OK
-INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects/95f8c43d-0943-43aa-aa68-6fa814af37d9 - Status: 200 - Time: 107.52ms
-INFO:     127.0.0.1:46172 - "GET /api/v1/projects/95f8c43d-0943-43aa-aa68-6fa814af37d9 HTTP/1.1" 200 OK
-INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects/ - Status: 307 - Time: 0.35ms
-INFO:     127.0.0.1:37686 - "GET /api/v1/projects/ HTTP/1.1" 307 Temporary Redirect
-INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 6.66ms
-INFO:     127.0.0.1:37686 - "GET /api/v1/projects HTTP/1.1" 200 OK
-INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects/95f8c43d-0943-43aa-aa68-6fa814af37d9 - Status: 200 - Time: 59.85ms
-INFO:     127.0.0.1:57408 - "GET /api/v1/projects/95f8c43d-0943-43aa-aa68-6fa814af37d9 HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/info - Status: 200 - Time: 218.69ms
+INFO:     127.0.0.1:47798 - "GET /api/v1/info HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/info - Status: 200 - Time: 3.41ms
+INFO:     127.0.0.1:48470 - "GET /api/v1/info HTTP/1.1" 200 OK

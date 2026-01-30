@@ -16,7 +16,7 @@ from oc4ids_datastore_api.models import (
     ProjectBenefit, BenefitBeneficiary,
     ProjectCompletion, ProjectLobbyingMeeting, BudgetBreakdown, BudgetBreakdownItem
 )
-from oc4ids_datastore_api.daos import ProjectDAO
+from oc4ids_datastore_api.daos import ProjectDAO, ReferenceDataDAO
 from sqlmodel import Session, select
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -799,3 +799,37 @@ def delete_project_data(project_id: str, session: Session) -> Dict[str, Any]:
 
     dao.delete(db_project)
     return {"message": "Project deleted successfully"}
+
+def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
+    """Fetch reference/lookup data for dropdowns and filters"""
+    dao = ReferenceDataDAO(session)
+    
+    # Fetch from database
+    sectors = dao.get_sectors()
+    ministries = dao.get_ministries()
+    contract_types = dao.get_contract_types()
+    project_types = dao.get_project_types()
+    concession_forms = dao.get_concession_forms()
+    
+    return {
+        "sector": [
+            {"id": s.code, "value": s.name_th}
+            for s in sectors
+        ],
+        "ministry": [
+            {"id": m.id, "value": m.name_th}
+            for m in ministries
+        ],
+        "contractType": [
+            {"id": ct.id, "value": ct.description or ct.code}
+            for ct in contract_types
+        ],
+        "projectType": [
+            {"id": pt.id, "value": pt.name_th if pt.name_th else pt.code}
+            for pt in project_types
+        ],
+        "concessionForm": [
+            {"id": cf.id, "value": cf.description or cf.code}
+            for cf in concession_forms
+        ]
+    }

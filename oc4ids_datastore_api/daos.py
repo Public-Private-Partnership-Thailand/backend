@@ -1,7 +1,7 @@
 from typing import List, Optional
 import uuid
 from sqlmodel import Session, select, func
-from oc4ids_datastore_api.models import Project, Ministry, Agency, ProjectParty, PartyAdditionalIdentifier
+from oc4ids_datastore_api.models import Project, Ministry, Agency, ProjectParty, PartyAdditionalIdentifier, Sector
 
 class ProjectDAO:
     def __init__(self, session: Session):
@@ -10,8 +10,8 @@ class ProjectDAO:
     def get_by_id(self, project_id: str) -> Optional[Project]:
         return self.session.get(Project, project_id)
 
-    def get_all(self, skip: int = 0, limit: int = 100) -> List[Project]:
-        return self.session.exec(select(Project).offset(skip).limit(limit)).all()
+    #def get_all(self, skip: int = 0, limit: int = 100) -> List[Project]:
+    #    return self.session.exec(select(Project).offset(skip).limit(limit)).all()
 
     def get_summaries(self, skip: int = 0, limit: int = 20):
         from sqlalchemy.orm import aliased
@@ -54,3 +54,37 @@ class ProjectDAO:
     def delete(self, project: Project) -> None:
         self.session.delete(project)
         self.session.commit()
+
+class ReferenceDataDAO:
+    """DAO for fetching reference/lookup data"""
+    def __init__(self, session: Session):
+        self.session = session
+    
+    def get_sectors(self) -> List[Sector]:
+        """Fetch all active sectors"""
+        return self.session.exec(
+            select(Sector).where(Sector.is_active == True)
+        ).all()
+    
+    def get_ministries(self) -> List[Ministry]:
+        """Fetch all ministries"""
+        return self.session.exec(select(Ministry)).all()
+    
+    def get_contract_types(self) -> List:
+        """Fetch contract types from additional_classifications"""
+        from oc4ids_datastore_api.models import AdditionalClassification
+        return self.session.exec(
+            select(AdditionalClassification).distinct()
+        ).all()
+    
+    def get_project_types(self):
+        """Fetch all project types"""
+        from oc4ids_datastore_api.models import ProjectType
+        return self.session.exec(select(ProjectType)).all()
+    
+    def get_concession_forms(self) -> List:
+        """Fetch concession forms from additional_classifications"""
+        from oc4ids_datastore_api.models import AdditionalClassification
+        return self.session.exec(
+            select(AdditionalClassification).distinct()
+        ).all()

@@ -11,7 +11,8 @@ from oc4ids_datastore_api.services import (
     get_project_by_id,
     create_project_data,
     update_project_data,
-    delete_project_data
+    delete_project_data,
+    get_reference_info
 )
 
 router = APIRouter()
@@ -92,3 +93,8 @@ def update_project(project_id: str, project_data: Dict[str, Any] = Body(...), se
 def delete_project(project_id: str, session: Session = Depends(get_session)):
     """Delete a project"""
     return delete_project_data(project_id, session)
+
+@router.get("/info")
+def get_info(session: Session = Depends(get_session)) -> Dict[str, List[Dict[str, Any]]]:
+    """Get reference data for dropdowns (sectors, ministries, etc.)"""
+    return get_reference_info(session)
