@@ -1075,4 +1075,4 @@ ALTER TABLE "agency" ADD FOREIGN KEY ("ministry_id") REFERENCES "ministry" ("id"
 
 ALTER TABLE "project_asset_lifetime" ADD FOREIGN KEY ("project_id") REFERENCES "projects" ("id");
 
-
+ALTER TABLE "project_asset_lifetime" ADD FOREIGN KEY ("project_id") REFERENCES "project_asset_lifetime" ("period_start_date");

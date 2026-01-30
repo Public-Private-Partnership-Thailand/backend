@@ -181,6 +181,19 @@ class ProjectParty(SQLModel, table=True):
     contact_url: Optional[str] = None
 
     project: "Project" = Relationship(back_populates="parties_list")
+    additional_identifiers: List["PartyAdditionalIdentifier"] = Relationship(back_populates="party")
+
+class PartyAdditionalIdentifier(SQLModel, table=True):
+    __tablename__ = "party_additional_identifiers"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    party_id: int = Field(foreign_key="project_parties.id")
+    scheme: Optional[str] = None
+    identifier: Optional[str] = None
+    legal_name_id: Optional[int] = Field(default=None, foreign_key="ministry.id")
+    uri: Optional[str] = None
+    
+    party: "ProjectParty" = Relationship(back_populates="additional_identifiers")
+    ministry: Optional["Ministry"] = Relationship()
 
 class PartyRole(SQLModel, table=True):
     __tablename__ = "party_roles"

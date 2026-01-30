@@ -2,7 +2,8 @@ from oc4ids_datastore_api.models import (
     Project, ProjectType, Sector, ProjectSectorLink, 
     ProjectLocation, ProjectParty, ProjectBudget, 
     ProjectPeriod, ProjectDocument, ProjectIdentifier,
-    PeriodType, Agency, Ministry, ProjectContractingProcess, Currency
+    PeriodType, Agency, Ministry, ProjectContractingProcess, Currency,
+    PartyAdditionalIdentifier
 )
 from oc4ids_datastore_api.daos import ProjectDAO
 from sqlmodel import Session, select
@@ -242,6 +243,13 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
     # - Parties (Full Details & Ministry Mapping)
     for party in parties_list:
         legal_name = party.get("identifier", {}).get("legalName")
+
+        # Fallback: Check additionalIdentifiers if legalName is not in main identifier
+        if not legal_name and "additionalIdentifiers" in party:
+            for ai in party["additionalIdentifiers"]:
+                if ai.get("legalName"):
+                    legal_name = ai.get("legalName")
+                    break
         ministry_id = None
         if legal_name:
             # Map legalName to Ministry table (Ministry Name)
@@ -268,6 +276,25 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
             contact_telephone=party.get("contactPoint", {}).get("telephone")
         )
         session.add(p_obj)
+        session.flush() # Need p_obj.id for additional identifiers
+
+        # - Additional Identifiers
+        if "additionalIdentifiers" in party:
+            for ai in party["additionalIdentifiers"]:
+                ai_legal_name = ai.get("legalName")
+                ai_ministry_id = None
+                if ai_legal_name:
+                     min_obj = _get_or_create_ref(session, Ministry, "name_th", ai_legal_name, {"name_en": ai_legal_name})
+                     ai_ministry_id = min_obj.id
+                
+                ai_obj = PartyAdditionalIdentifier(
+                    party_id=p_obj.id,
+                    scheme=ai.get("scheme"),
+                    identifier=ai.get("id"),
+                    legal_name_id=ai_ministry_id,
+                    uri=ai.get("uri")
+                )
+                session.add(ai_obj)
 
     # - Contracting Processes
     for cp in project_data.get("contractingProcesses", []):

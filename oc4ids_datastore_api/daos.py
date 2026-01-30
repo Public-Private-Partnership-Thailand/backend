@@ -1,7 +1,7 @@
 from typing import List, Optional
 import uuid
 from sqlmodel import Session, select, func
-from oc4ids_datastore_api.models import Project, Ministry, Agency, ProjectParty
+from oc4ids_datastore_api.models import Project, Ministry, Agency, ProjectParty, PartyAdditionalIdentifier
 
 class ProjectDAO:
     def __init__(self, session: Session):
@@ -18,13 +18,14 @@ class ProjectDAO:
             select(
                 Project.id,
                 Project.title,
-                Agency.name_th.label("agency_name"),
-                func.string_agg(Ministry.name_th, ', ').label("ministry_names")
+                Agency.name_en.label("agency_name"),
+                func.string_agg(Ministry.name_en.distinct(), ', ').label("ministry_names")
             )
             .join(Agency, Project.public_authority_id == Agency.id, isouter=True)
             .join(ProjectParty, Project.id == ProjectParty.project_id, isouter=True)
-            .join(Ministry, ProjectParty.identifier_legal_name_id == Ministry.id, isouter=True)
-            .group_by(Project.id, Project.title, Agency.name_th)
+            .join(PartyAdditionalIdentifier, ProjectParty.id == PartyAdditionalIdentifier.party_id, isouter=True)
+            .join(Ministry, PartyAdditionalIdentifier.legal_name_id == Ministry.id, isouter=True)
+            .group_by(Project.id, Project.title, Agency.name_en)
             .offset(skip)
             .limit(limit)
         )
