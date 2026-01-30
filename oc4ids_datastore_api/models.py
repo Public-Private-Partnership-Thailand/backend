@@ -162,8 +162,8 @@ class ProjectParty(SQLModel, table=True):
     name: Optional[str] = None
     identifier_scheme: Optional[str] = None
     identifier_value: Optional[str] = None
-    identifier_legal_name_id: Optional[int] = Field(default=None, foreign_key="ministry.id")
-    ministry: Optional["Ministry"] = Relationship()
+    identifier_legal_name_id: Optional[int] = Field(default=None, foreign_key="agency.id")
+    agency: Optional["Agency"] = Relationship()
     identifier_uri: Optional[str] = None
     
     # Address (Embedded)

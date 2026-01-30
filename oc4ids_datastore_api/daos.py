@@ -14,17 +14,22 @@ class ProjectDAO:
         return self.session.exec(select(Project).offset(skip).limit(limit)).all()
 
     def get_summaries(self, skip: int = 0, limit: int = 20):
+        from sqlalchemy.orm import aliased
+        PartyAgency = aliased(Agency)
+
         statement = (
             select(
                 Project.id,
                 Project.title,
                 Agency.name_en.label("agency_name"),
-                func.string_agg(Ministry.name_en.distinct(), ', ').label("ministry_names")
+                func.string_agg(Ministry.name_en.distinct(), ', ').label("ministry_names"),
+                func.string_agg(PartyAgency.name_en.distinct(), ', ').label("private_party_name")
             )
             .join(Agency, Project.public_authority_id == Agency.id, isouter=True)
             .join(ProjectParty, Project.id == ProjectParty.project_id, isouter=True)
             .join(PartyAdditionalIdentifier, ProjectParty.id == PartyAdditionalIdentifier.party_id, isouter=True)
             .join(Ministry, PartyAdditionalIdentifier.legal_name_id == Ministry.id, isouter=True)
+            .join(PartyAgency, ProjectParty.identifier_legal_name_id == PartyAgency.id, isouter=True)
             .group_by(Project.id, Project.title, Agency.name_en)
             .offset(skip)
             .limit(limit)

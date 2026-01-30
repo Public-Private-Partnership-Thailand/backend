@@ -79,12 +79,17 @@ def get_all_projects_summary(session: Session, page: int = 1, page_size: int = 2
         if row.ministry_names:
              # Split string and remove duplicates if any (Postgres string_agg might duplicate if join is many-to-many before agg)
              ministries = list(set([m.strip() for m in row.ministry_names.split(',') if m.strip()]))
+        
+        private_parties = []
+        if getattr(row, "private_party_name", None):
+             private_parties = list(set([p.strip() for p in row.private_party_name.split(',') if p.strip()]))
 
         data.append({
             "id": str(row.id),
             "title": row.title,
             "ministry": ministries,
-            "public_authority": row.agency_name
+            "public_authority": row.agency_name,
+            "private_parties": private_parties
         })
     
     return {
@@ -252,9 +257,9 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
                     break
         ministry_id = None
         if legal_name:
-            # Map legalName to Ministry table (Ministry Name)
-            min_obj = _get_or_create_ref(session, Ministry, "name_th", legal_name, {"name_en": legal_name})
-            ministry_id = min_obj.id
+            # Map legalName to Agency table (Agency Name)
+            agency_obj = _get_or_create_ref(session, Agency, "name_th", legal_name, {"name_en": legal_name})
+            ministry_id = agency_obj.id
 
         p_obj = ProjectParty(
             project_id=db_project.id,
