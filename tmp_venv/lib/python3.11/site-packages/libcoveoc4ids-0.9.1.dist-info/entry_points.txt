@@ -1,0 +1,2 @@
+[console_scripts]
+libcoveoc4ids = libcoveoc4ids.__main__:main

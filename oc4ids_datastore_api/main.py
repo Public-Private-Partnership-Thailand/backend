@@ -52,5 +52,18 @@ app.add_middleware(
 )
 
 # Include Router with Versioning
+# Include Router with Versioning
 app.include_router(router, prefix="/api/v1", tags=["Projects"])
+
+from oc4ids_datastore_api.database import engine
+from sqlmodel import SQLModel
+
+@app.get("/api/debug/reset-db")
+def debug_reset_db():
+    try:
+        SQLModel.metadata.drop_all(engine)
+        SQLModel.metadata.create_all(engine)
+        return {"status": "success", "message": "Database reset successfully."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 

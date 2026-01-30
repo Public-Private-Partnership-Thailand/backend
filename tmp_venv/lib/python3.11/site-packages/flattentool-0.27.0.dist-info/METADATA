@@ -1,0 +1,27 @@
+Metadata-Version: 2.1
+Name: flattentool
+Version: 0.27.0
+Summary: Tools for generating CSV and other flat versions of the structured data
+Home-page: https://github.com/OpenDataServices/flatten-tool
+Author: Open Data Services
+Author-email: code@opendataservices.coop
+License: MIT
+Requires-Python: >=3.9.0
+Description-Content-Type: text/plain
+License-File: LICENSE
+Requires-Dist: jsonref
+Requires-Dist: schema
+Requires-Dist: openpyxl!=3.0.2,>=2.6
+Requires-Dist: pytz
+Requires-Dist: xmltodict
+Requires-Dist: lxml
+Requires-Dist: odfpy
+Requires-Dist: backports-datetime-fromisoformat; platform_python_implementation != "PyPy"
+Requires-Dist: zodb
+Requires-Dist: zc.zlibstorage
+Requires-Dist: ijson
+Provides-Extra: http
+Requires-Dist: requests; extra == "http"
+Provides-Extra: geo
+Requires-Dist: shapely; extra == "geo"
+Requires-Dist: geojson; extra == "geo"

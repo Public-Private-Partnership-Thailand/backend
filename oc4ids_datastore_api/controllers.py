@@ -44,7 +44,20 @@ async def upload_file(file: UploadFile = File(...), session: Session = Depends(g
         if ext == "json":
             contents = await file.read()
             data = json.loads(contents)
-            # Potentially blocking DB call, consider refactoring to sync or run_in_threadpool if strictly needed
+            
+            # Handle OC4IDS Package format (has 'projects' list)
+            if "projects" in data and isinstance(data["projects"], list):
+                results = []
+                for p_data in data["projects"]:
+                    # Basic error handling for each project
+                    try:
+                        res = create_project_data(p_data, session)
+                        results.append(res)
+                    except Exception as e:
+                        results.append({"error": str(e), "project_title": p_data.get("title")})
+                return {"status": "success", "results": results}
+            
+            # Helper for single project file
             return create_project_data(data, session)
 
         elif ext == "csv":

@@ -1,0 +1,22 @@
+Metadata-Version: 2.1
+Name: libcove
+Version: 0.32.1
+Summary: A data review library
+Home-page: https://github.com/OpenDataServices/lib-cove
+Author: Open Data Services
+Author-email: code@opendataservices.coop
+License: UNKNOWN
+Platform: UNKNOWN
+Classifier: License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)
+License-File: LICENSE
+Requires-Dist: flattentool (>=0.11.0)
+Requires-Dist: jsonref
+Requires-Dist: jsonschema (>=4.18)
+Requires-Dist: referencing
+Requires-Dist: requests
+Requires-Dist: rfc3339-validator
+Requires-Dist: rfc3987
+Requires-Dist: cached-property ; python_version < "3.8"
+
+A data review library
+

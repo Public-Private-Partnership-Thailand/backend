@@ -1,0 +1,57 @@
+Metadata-Version: 2.4
+Name: libcoveoc4ids
+Version: 0.9.1
+Summary: A data review library for the Open Contracting for Infrastructure Data Standards (OC4IDS)
+Author-email: Open Contracting Partnership and Open Data Services Co-operative Limited <data@open-contracting.org>
+License: AGPL-3.0-or-later
+Project-URL: Homepage, https://github.com/open-contracting/lib-cove-oc4ids
+Classifier: License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)
+Classifier: Operating System :: MacOS
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Description-Content-Type: text/x-rst
+License-File: LICENSE
+Requires-Dist: click
+Requires-Dist: libcove>=0.32
+Requires-Dist: libcoveocds<0.17,>=0.12.7
+Provides-Extra: perf
+Requires-Dist: orjson>=3; extra == "perf"
+Provides-Extra: test
+Requires-Dist: coverage; extra == "test"
+Requires-Dist: pytest; extra == "test"
+Dynamic: license-file
+
+Lib Cove OC4IDS
+===============
+
+|PyPI Version| |Build Status| |Coverage Status| |Python Version|
+
+Command line
+------------
+
+Call ``libcoveoc4ids`` and pass the filename of some JSON data.
+
+::
+
+   libcoveoc4ids tests/fixtures/api/basic_1.json
+
+Code for use by external users
+------------------------------
+
+The only code that should be used directly by users is the ``libcoveoc4ids.config`` and ``libcoveoc4ids.api`` modules.
+
+Other code (in ``lib``, etc.) should not be used by external users of this library directly, as the structure and use of these may change more frequently.
+
+
+.. |PyPI Version| image:: https://img.shields.io/pypi/v/libcoveoc4ids.svg
+   :target: https://pypi.org/project/libcoveoc4ids/
+.. |Build Status| image:: https://github.com/open-contracting/lib-cove-oc4ids/actions/workflows/ci.yml/badge.svg
+   :target: https://github.com/open-contracting/lib-cove-oc4ids/actions/workflows/ci.yml
+.. |Coverage Status| image:: https://coveralls.io/repos/github/open-contracting/lib-cove-oc4ids/badge.svg?branch=main
+   :target: https://coveralls.io/github/open-contracting/lib-cove-oc4ids?branch=main
+.. |Python Version| image:: https://img.shields.io/pypi/pyversions/libcoveoc4ids.svg
+   :target: https://pypi.org/project/libcoveoc4ids/

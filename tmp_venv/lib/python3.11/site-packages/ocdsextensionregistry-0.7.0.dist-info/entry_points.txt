@@ -1,0 +1,2 @@
+[console_scripts]
+ocdsextensionregistry = ocdsextensionregistry.__main__:main

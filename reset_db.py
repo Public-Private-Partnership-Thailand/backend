@@ -1,5 +1,8 @@
-from dotenv import load_dotenv
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 from sqlmodel import SQLModel, text, Session
 from oc4ids_datastore_api.database import engine

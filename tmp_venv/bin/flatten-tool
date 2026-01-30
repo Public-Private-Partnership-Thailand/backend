@@ -1,0 +1,4 @@
+#!/home/ben/CU_PPP/backend/tmp_venv/bin/python3
+import flattentool.cli
+
+flattentool.cli.main()
