@@ -818,7 +818,7 @@ def delete_project_data(project_id: str, session: Session) -> Dict[str, Any]:
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    dao.delete(db_project)
+    dao.delete(project_id)
     return {"message": "Project deleted successfully"}
 
 def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
