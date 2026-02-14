@@ -17,7 +17,8 @@ def format_thai_amount(amount: float) -> str:
     if value % 1 == 0:  
         formatted = f"{value:,.0f}"
     else:
-        formatted = f"{value:,.1f}".rstrip('0').rstrip('.')
+        # Show up to 2 decimal places, remove trailing zeros
+        formatted = f"{value:,.2f}".rstrip('0').rstrip('.')
     
     result = f"{formatted} {unit_suffix}"
     return f"-{result}" if is_negative else result
