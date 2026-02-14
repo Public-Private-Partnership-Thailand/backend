@@ -848,6 +848,11 @@ class Project(SQLModel, table=True):
     sectors: List["Sector"] = Relationship(link_model=ProjectSectorLink)
     additional_classifications: List["AdditionalClassification"] = Relationship(link_model=ProjectAdditionalClassificationLink)
 
+    def _format_amount(self, amount: float) -> str:
+        """Format amount in Thai style with units"""
+        from oc4ids_datastore_api.utils import format_thai_amount
+        return format_thai_amount(amount)
+
     def to_oc4ids(self) -> Dict[str, Any]:
         """Convert the project and its children to OC4IDS JSON format"""
         result = {
@@ -1124,8 +1129,11 @@ class Project(SQLModel, table=True):
             # Budget
             "budget": {
                 "count": 0, # Placeholder if needed
-                "amount": self.budget.total_amount,
-                "currency": self.budget.currency,
+                "amount": {
+                    "amount": self.budget.total_amount,
+                    "currency": self.budget.currency,
+                    "amountFormatted": self._format_amount(self.budget.total_amount) if self.budget.total_amount else ""
+                },
                 "approvalDate": self.budget.approval_date.isoformat() if self.budget.approval_date else None,
                 "breakdown": [
                     {

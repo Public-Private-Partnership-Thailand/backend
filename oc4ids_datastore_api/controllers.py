@@ -12,7 +12,8 @@ from oc4ids_datastore_api.services import (
     create_project_data,
     update_project_data,
     delete_project_data,
-    get_reference_info
+    get_reference_info,
+    get_dashboard_summary
 )
 
 router = APIRouter()
@@ -25,7 +26,8 @@ def read_projects(
     sector_id: Optional[List[int]] = Query(None),
     ministry_id: Optional[List[int]] = Query(None),
     agency_id: Optional[List[int]] = Query(None),
-    concession_form: Optional[str] = None,
+    concession_form: Optional[List[int]] = Query(None),
+    contractType: Optional[List[int]] = Query(None),
     year_from: Optional[int] = None,
     year_to: Optional[int] = None,
     session: Session = Depends(get_session)
@@ -39,9 +41,60 @@ def read_projects(
         sector_id=sector_id,
         ministry_id=ministry_id,
         agency_id=agency_id,
-        concession_form=concession_form,
+        concession_form_id=concession_form,
+        contract_type_id=contractType,
         year_from=year_from,
         year_to=year_to
+    )
+
+
+@router.get("/summary")
+def get_summary(
+    search: Optional[str] = None,
+    sector: Optional[str] = Query(None), 
+    sector_id: Optional[str] = Query(None, alias="sector"), 
+    businessGroup: Optional[str] = Query(None),
+    ministry: Optional[str] = Query(None),
+    agency: Optional[str] = Query(None),
+    concessionForm: Optional[str] = Query(None), 
+    contractType: Optional[str] = Query(None),
+    startDate: Optional[str] = None,
+    endDate: Optional[str] = None,
+    session: Session = Depends(get_session)
+) -> Dict[str, Any]:
+    
+    # Helper to parse comma-separated IDs
+    def parse_ids(value: Optional[str]) -> Optional[List[int]]:
+        if not value:
+            return None
+        return [int(x) for x in value.split(',') if x.strip().isdigit()]
+    
+    # Parse dates
+    y_from = None
+    y_to = None
+    if startDate:
+         try:
+             y_from = int(startDate[:4])
+         except: pass
+    if endDate:
+         try:
+             y_to = int(endDate[:4])
+         except: pass
+
+    # Sector mapping: businessGroup or sector param
+    # useSummary sends 'businessGroup' -> maps to sector IDs
+    s_ids = parse_ids(businessGroup) or parse_ids(sector_id) or parse_ids(sector)
+
+    return get_dashboard_summary(
+        session,
+        search=search,
+        sector_id=s_ids,
+        ministry_id=parse_ids(ministry),
+        agency_id=parse_ids(agency),
+        concession_form_id=parse_ids(concessionForm),
+        contract_type_id=parse_ids(contractType),
+        year_from=y_from,
+        year_to=y_to
     )
 
 

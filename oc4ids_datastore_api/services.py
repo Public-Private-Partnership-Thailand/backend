@@ -21,6 +21,7 @@ from oc4ids_datastore_api.models import (
     ProjectPolicyAlignment, ProjectPolicyAlignmentPolicy, ProjectAssetLifetime
 )
 from oc4ids_datastore_api.daos import ProjectDAO, ReferenceDataDAO
+from oc4ids_datastore_api.utils import format_thai_amount
 from sqlmodel import Session, select
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -166,16 +167,16 @@ def _create_metrics(session: Session, project_id: uuid.UUID, data_list: List[Dic
         session.flush()
 
         for obs_data in m.get("observations", []):
-            val_data = obs_data.get("value", {})
-            unit_data = obs_data.get("unit", {})
+            val_data = obs_data.get("value") or {}
+            unit_data = obs_data.get("unit") or {}
             
             obs_obj = MetricObservation(
                 metric_id=m_obj.id,
                 local_id=obs_data.get("id", str(uuid.uuid4())),
                 measure=obs_data.get("measure"),
-                value_amount=val_data.get("amount"),
-                value_currency=val_data.get("currency"),
-                unit_name=unit_data.get("name")
+                value_amount=val_data.get("amount") if val_data else None,
+                value_currency=val_data.get("currency") if val_data else None,
+                unit_name=unit_data.get("name") if unit_data else None
             )
             session.add(obs_obj)
 
@@ -528,6 +529,8 @@ def _create_policy(session: Session, project_id: uuid.UUID, policy_data: Any):
                session.add(ProjectPolicyAlignmentPolicy(project_id=project_id, policy=p))
 
 def _create_asset_lifetime(session: Session, project_id: uuid.UUID, lifetime_data: Dict):
+    if not lifetime_data:
+        return
     session.add(ProjectAssetLifetime(
         project_id=project_id,
         period_start_date=_parse_date(lifetime_data.get("startDate")),
@@ -545,7 +548,8 @@ def get_all_projects_summary(
     sector_id: Optional[List[int]] = None,
     ministry_id: Optional[List[int]] = None,
     agency_id: Optional[List[int]] = None,
-    concession_form: Optional[str] = None,
+    concession_form_id: Optional[List[int]] = None,
+    contract_type_id: Optional[List[int]] = None,
     year_from: Optional[int] = None,
     year_to: Optional[int] = None
 ) -> Dict[str, Any]:
@@ -560,7 +564,8 @@ def get_all_projects_summary(
         sector_id=sector_id,
         ministry_id=ministry_id,
         agency_id=agency_id,
-        concession_form=concession_form,
+        concession_form_id=concession_form_id,
+        contract_type_id=contract_type_id,
         year_from=year_from,
         year_to=year_to
     )
@@ -568,20 +573,62 @@ def get_all_projects_summary(
     
     data = []
     for row in results:
-        ministries = []
-        if row.ministry_names:
-             ministries = list(set([m.strip() for m in row.ministry_names.split(',') if m.strip()]))
+        # Process Ministries (Party + Agency)
+        ministries = set()
+        if hasattr(row, 'party_ministry_names') and row.party_ministry_names:
+            ministries.update([m.strip() for m in row.party_ministry_names.split(',') if m.strip()])
+        if hasattr(row, 'agency_ministry_names') and row.agency_ministry_names:
+            ministries.update([m.strip() for m in row.agency_ministry_names.split(',') if m.strip()])
         
+        # Frontend expects 'ministry' list of strings for display?
+        # Projects page Line 711: project.additionalClassifications.find(TH-MINISTRY).description
+        # So we need to populate additionalClassifications.
+        
+        ministry_list = list(ministries)
+        
+        ministry_classifications = [
+            {"scheme": "TH-MINISTRY", "description": m} for m in ministry_list
+        ]
+        
+        # Process Private Parties
         private_parties = []
         if getattr(row, "private_party_name", None):
              private_parties = list(set([p.strip() for p in row.private_party_name.split(',') if p.strip()]))
 
+        # Process Sectors
+        sectors = []
+        if hasattr(row, 'sector_names') and row.sector_names:
+            sectors = list(set([s.strip() for s in row.sector_names.split(',') if s.strip()]))
+
+        # Process Contract Types (identifiers)
+        contract_types = []
+        if hasattr(row, 'contract_type_names') and row.contract_type_names:
+            contract_types = list(set([c.strip() for c in row.contract_type_names.split(',') if c.strip()]))
+            
+        identifiers = [
+            {"scheme": "TH-PPP-TYPE", "id": c} for c in contract_types
+        ]
+
         data.append({
             "id": str(row.id),
             "title": row.title,
-            "ministry": ministries,
-            "public_authority": row.agency_name,
-            "private_parties": private_parties
+            "ministry": ministry_list, # Kept for backward compatibility if used elsewhere
+            "additionalClassifications": ministry_classifications,
+            "public_authority": row.agency_name, # Return string to match frontend expectation
+            "private_parties": private_parties,
+            "parties": [{"name": p, "roles": ["contractor"]} for p in private_parties], 
+            # Frontend line 721: project.parties.filter(contractor).map(name).
+            # So I must return parties list with roles.
+            
+            "sector": sectors,
+            "identifiers": identifiers,
+            
+            # Needed columns for display
+            "description": "", # Placeholder
+            "period": {
+                "startDate": row.period_start_date.isoformat() if hasattr(row, 'period_start_date') and row.period_start_date else "",
+                "endDate": row.period_end_date.isoformat() if hasattr(row, 'period_end_date') and row.period_end_date else ""
+            },
         })
     
     return {
@@ -634,7 +681,9 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
 
     project_data["id"] = str(pid)
     project_id_str = project_data["id"]
-    logger.info(f"Creating project {project_id_str}")
+    project_data["id"] = str(pid)
+    project_id_str = project_data["id"]
+    logger.info(f"Creating project data for {project_id_str}")
 
     # 1. Validation
     # wrapped = add_metadata(project_data)
@@ -1062,14 +1111,56 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
         _create_contracting_details(session, cp_obj.id, summary)
 
     # Commit all changes
-    session.commit()
+    try:
+        session.commit()
+        logger.info(f"Successfully committed project {project_id_str}")
+    except Exception as e:
+        logger.error(f"Error committing project {project_id_str}: {e}")
+        session.rollback()
+        raise e
+        
     session.refresh(db_project)
     
     return {"message": "Project created successfully", "project": {"id": str(db_project.id), "title": db_project.title}}
 
 def update_project_data(project_id: str, project_data: Dict[str, Any], session: Session) -> Dict[str, Any]:
-    # Placeholder for update logic (would require more complex diffing for child tables)
-    raise NotImplementedError("Update logic needs to be refactored for new schema")
+    """Updates an existing project by deleting and recreating it"""
+    logger.info(f"Starting update for project {project_id}")
+    # 1. Verify existence and consistency
+    dao = ProjectDAO(session)
+    existing_project = dao.get_by_id(project_id)
+    
+    if not existing_project:
+        logger.error(f"Project {project_id} not found during update")
+        raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
+
+    # 2. Delete existing project
+    # This will cascade delete all related records due to ON DELETE CASCADE or manual cleanup in DAO
+    # We call delete directly. delete() method handles existence check internally.
+    try:
+        logger.info(f"Deleting existing project {project_id}")
+        dao.delete(project_id)
+        logger.info(f"Deleted existing project {project_id}")
+    except ValueError as e:
+         logger.error(f"Error deleting project {project_id}: {e}")
+         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
+    except Exception as e:
+         logger.error(f"Unexpected error deleting project {project_id}: {e}")
+         raise e
+    
+    # Ensure session is clean for new insertion
+    session.expire_all()
+    
+    # 3. Create new project with the same ID
+    # Ensure ID in data matches the URL endpoint ID
+    project_data["id"] = project_id
+    
+    logger.info(f"Re-creating project {project_id} with new data")
+    try:
+        return create_project_data(project_data, session)
+    except Exception as e:
+        logger.error(f"Error re-creating project {project_id}: {e}")
+        raise e
 
 def delete_project_data(project_id: str, session: Session) -> Dict[str, Any]:
     """Deletes a project"""
@@ -1113,4 +1204,95 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
             {"id": cf.id, "value": cf.description or cf.code}
             for cf in concession_forms
         ]
+    }
+
+def get_dashboard_summary(
+    session: Session, 
+    sector_id: Optional[List[int]] = None,
+    ministry_id: Optional[List[int]] = None,
+    agency_id: Optional[List[int]] = None,
+    concession_form_id: Optional[List[int]] = None,
+    contract_type_id: Optional[List[int]] = None,
+    year_from: Optional[int] = None,
+    year_to: Optional[int] = None,
+    search: Optional[str] = None
+) -> Dict[str, Any]:
+    """Get dashboard summary statistics and latest projects matching filters"""
+    dao = ProjectDAO(session)
+    projects = dao.get_summaries(
+        limit=10000,
+        title=search,
+        sector_id=sector_id,
+        ministry_id=ministry_id,
+        agency_id=agency_id,
+        concession_form_id=concession_form_id,
+        contract_type_id=contract_type_id,
+        year_from=year_from,
+        year_to=year_to
+    )
+    
+    total_projects = len(projects)
+    unique_contractors = set()
+    total_investment = 0
+    max_budget = 0  # Track maximum budget
+    ministry_counts = {}
+    latest_projects_data = []
+
+    for idx, p in enumerate(projects):
+        # Budget
+        amt = getattr(p, "budget_amount", 0) or 0
+        total_investment += amt
+        if amt > max_budget:
+            max_budget = amt
+        
+        # Contractors
+        if getattr(p, "private_party_name", None):
+             for name in p.private_party_name.split(','):
+                  unique_contractors.add(name.strip())
+
+        # Ministries
+        if getattr(p, "ministry_names", None):
+             for name in p.ministry_names.split(','):
+                  name = name.strip()
+                  ministry_counts[name] = ministry_counts.get(name, 0) + 1
+        
+        # Latest Projects (Top 5)
+        if idx < 5:
+             mins = []
+             if getattr(p, "ministry_names", None):
+                  mins = [m.strip() for m in p.ministry_names.split(',')]
+
+             latest_projects_data.append({
+                 "id": str(p.id),
+                 "title": p.title,
+                 "ministry": mins,
+                 "public_authority": p.agency_name,
+                 "budget": {"amount": {"amount": amt, "currency": "THB"}},
+                 "status": "implementation",
+                 "type": "PPP",
+                 "updated": datetime.utcnow().isoformat()
+             })
+
+    ministry_stats = [
+        {"ministry": k, "projectCount": v, "totalInvestment": 0, "rank": i+1}
+        for i, (k, v) in enumerate(sorted(ministry_counts.items(), key=lambda item: item[1], reverse=True))
+    ]
+
+    return {
+        "summary": {
+            "totalProjects": total_projects,
+            "uniqueContractors": len(unique_contractors),
+            "totalInvestment": total_investment,
+            "maxBudget": max_budget
+        },
+        "ministryStats": ministry_stats,
+        "latestProjects": latest_projects_data,
+        "otherMinistries": {"projectCount": 0, "totalInvestment": 0},
+        "ministryInvestments": [],
+        "otherMinistriesInvestment": {"totalInvestment": 0, "projectCount": 0},
+        "projectScales": {"small": {"count":0, "investment":0}, "medium": {"count":0, "investment":0}, "big": {"count":0, "investment":0}},
+        "investmentByYear": [],
+        "businessGroupStats": [],
+        "sectorCounts": {},
+        "projectScope": {"domestic": {"count":0, "investment":0}, "international": {"count":0, "investment":0}}
     }
