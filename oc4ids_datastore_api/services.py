@@ -694,6 +694,53 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
     # except Exception as e:
     #     logger.warning(f"Validation skipped due to error (likely network): {e}")
 
+    # 1. Validation for Mandatory Fields (User Requirement)
+    missing_fields = []
+
+    # 1.1 Project Type
+    if not project_data.get("type"):
+        missing_fields.append("Project Type (ประเภทโครงการ)")
+
+    # 1.2 Sector (Business Group) - กลุ่มกิจการ
+    if not project_data.get("sector") or not isinstance(project_data["sector"], list) or len(project_data["sector"]) == 0:
+        missing_fields.append("Business Group/Sector (กลุ่มกิจการ)")
+
+    # 1.3 Project Duration (ระยะเวลาโครงการ)
+    # Check 'period' -> 'durationInDays' or 'startDate'/'endDate' depending on definition
+    # User asked for "Project Duration". Usually this is period object.
+    period_data = project_data.get("period", {})
+    if not period_data or (not period_data.get("durationInDays") and not (period_data.get("startDate") and period_data.get("endDate"))):
+         # If no explicit duration, and no start/end date to calculate it, consider it missing.
+         # Or strictly check 'durationInDays' if that's what front-end sends.
+         # Let's check generally for period existence and meaningful data
+         missing_fields.append("Project Duration (ระยะเวลาโครงการ)")
+
+    # 1.4 Public Authority (Owner Agency) & 1.5 Private Party
+    parties_list = project_data.get("parties", [])
+    has_public_authority = False
+    has_private_party = False
+    
+    for p in parties_list:
+        roles = p.get("roles", [])
+        if "publicAuthority" in roles or "actingPublicAuthority" in roles:
+            has_public_authority = True
+        
+        # Check for Private Party roles (contractor, supplier, tenderer, or explicit privateParty)
+        # Based on get_summaries, it looks for 'contractor'.
+        if any(r in ["contractor", "supplier", "tenderer", "privateParty"] for r in roles):
+            has_private_party = True
+
+    if not has_public_authority:
+        missing_fields.append("Public Authority/Owner Agency (หน่วยงานเจ้าของโครงการ)")
+    
+    if not has_private_party:
+        missing_fields.append("Private Party (เอกชนคู่สัญญา)")
+
+    if missing_fields:
+        error_msg = f"Missing mandatory fields: {', '.join(missing_fields)}"
+        logger.error(f"Validation failed for project {project_id_str}: {error_msg}")
+        raise HTTPException(status_code=400, detail=error_msg)
+
     # 2. Main Model Data
     model_data = {}
     valid_columns = ["id", "title", "description", "status", "purpose"]
@@ -701,13 +748,12 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
         if col in project_data:
             model_data[col] = project_data[col]
     
-    if "type" in project_data:
-        pt = _get_or_create_ref(session, ProjectType, "code", project_data["type"], {"name_en": project_data["type"]})
-        model_data["project_type_id"] = pt.id
+    # Project Type is now mandatory and validated
+    pt = _get_or_create_ref(session, ProjectType, "code", project_data["type"], {"name_en": project_data["type"]})
+    model_data["project_type_id"] = pt.id
 
-    # 4. Handle Parties & Public Authority
-    parties_list = project_data.get("parties", [])
-    
+    # Public Authority is now mandatory and validated
+    # We need to find the specific party again to get the name
     public_authority_party = None
     for p in parties_list:
         roles = p.get("roles", [])
@@ -720,6 +766,9 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
         if pa_name:
             agency = _get_or_create_ref(session, Agency, "name_th", pa_name, {"name_en": pa_name})
             model_data["public_authority_id"] = agency.id
+        else:
+             # Should technically be caught by validation if name missing, but let's be safe
+             raise HTTPException(status_code=400, detail="Public Authority party exists but has no name.")
 
     db_project = Project(**model_data)
 
@@ -1236,6 +1285,23 @@ def get_dashboard_summary(
     total_investment = 0
     max_budget = 0  # Track maximum budget
     ministry_counts = {}
+    ministry_investments = {}
+    
+    # Project Scales Buckets (THB Million)
+    # Small < 1,000M
+    # Medium 1,000M - 5,000M
+    # Big > 5,000M
+    project_scales = {
+        "small": {"count": 0, "investment": 0},
+        "medium": {"count": 0, "investment": 0},
+        "big": {"count": 0, "investment": 0}
+    }
+    
+    investment_by_year = {} # year -> total_amount
+    
+    # Sector Stats with Scale Breakdown
+    sector_stats = {} 
+    # Structure: sector_name -> { total: {}, small: {}, medium: {}, big: {} }
     latest_projects_data = []
 
     for idx, p in enumerate(projects):
@@ -1250,32 +1316,97 @@ def get_dashboard_summary(
              for name in p.private_party_name.split(','):
                   unique_contractors.add(name.strip())
 
-        # Ministries
-        if getattr(p, "ministry_names", None):
-             for name in p.ministry_names.split(','):
-                  name = name.strip()
-                  ministry_counts[name] = ministry_counts.get(name, 0) + 1
+        # Ministries Data
+        p_ministries = []
+        if getattr(p, "party_ministry_names", None):
+             p_ministries.extend([m.strip() for m in p.party_ministry_names.split(',') if m.strip()])
+        if getattr(p, "agency_ministry_names", None):
+             p_ministries.extend([m.strip() for m in p.agency_ministry_names.split(',') if m.strip()])
         
+        p_ministries = list(set(p_ministries)) # Unique per project
+
+        for m_name in p_ministries:
+             ministry_counts[m_name] = ministry_counts.get(m_name, 0) + 1
+             ministry_investments[m_name] = ministry_investments.get(m_name, 0) + amt 
+        
+        # Determine Scale
+        scale_key = "small"
+        if amt > 5_000_000_000:
+            scale_key = "big"
+        elif amt > 1_000_000_000:
+            scale_key = "medium"
+        
+        # Update Overall Project Scales
+        project_scales[scale_key]["count"] += 1
+        project_scales[scale_key]["investment"] += amt
+
+        # Sectors Calculation
+        if getattr(p, "sector_names", None):
+            for s_name in p.sector_names.split(','):
+                s_name = s_name.strip()
+                if s_name not in sector_stats:
+                    sector_stats[s_name] = {
+                        "total": {"count": 0, "investment": 0},
+                        "small": {"count": 0, "investment": 0},
+                        "medium": {"count": 0, "investment": 0},
+                        "big": {"count": 0, "investment": 0}
+                    }
+                
+                # Update Total
+                sector_stats[s_name]["total"]["count"] += 1
+                sector_stats[s_name]["total"]["investment"] += amt
+                
+                # Update Specific Scale
+                sector_stats[s_name][scale_key]["count"] += 1
+                sector_stats[s_name][scale_key]["investment"] += amt
+
+        # Investment by Year
+        if hasattr(p, 'period_start_date') and p.period_start_date:
+            year = p.period_start_date.year
+            investment_by_year[year] = investment_by_year.get(year, 0) + amt
+
         # Latest Projects (Top 5)
         if idx < 5:
-             mins = []
-             if getattr(p, "ministry_names", None):
-                  mins = [m.strip() for m in p.ministry_names.split(',')]
-
              latest_projects_data.append({
                  "id": str(p.id),
                  "title": p.title,
-                 "ministry": mins,
+                 "ministry": p_ministries,
                  "public_authority": p.agency_name,
                  "budget": {"amount": {"amount": amt, "currency": "THB"}},
-                 "status": "implementation",
-                 "type": "PPP",
+                 "status": "implementation",  # Placeholder or map from p.status
+                 "type": "PPP", # Placeholder
                  "updated": datetime.utcnow().isoformat()
              })
 
-    ministry_stats = [
-        {"ministry": k, "projectCount": v, "totalInvestment": 0, "rank": i+1}
-        for i, (k, v) in enumerate(sorted(ministry_counts.items(), key=lambda item: item[1], reverse=True))
+    # Format Output Lists
+    ministry_stats_list = [
+        {"ministry": k, "projectCount": v, "totalInvestment": ministry_investments.get(k, 0), "rank": 0}
+        for k, v in ministry_counts.items()
+    ]
+    # Sort by project count
+    ministry_stats_list.sort(key=lambda x: x["projectCount"], reverse=True)
+    for i, item in enumerate(ministry_stats_list):
+        item["rank"] = i + 1
+
+    ministry_investments_list = [
+        {"ministry": k, "totalInvestment": v}
+        for k, v in ministry_investments.items()
+    ]
+    ministry_investments_list.sort(key=lambda x: x["totalInvestment"], reverse=True)
+
+    business_group_stats = [
+        {
+            "groupName": k, 
+            "total": v["total"],
+            "small": v["small"],
+            "medium": v["medium"],
+            "big": v["big"]
+        }
+        for k, v in sector_stats.items()
+    ]
+    
+    investment_by_year_list = [
+        {"year": k, "value": v} for k,v in sorted(investment_by_year.items())
     ]
 
     return {
@@ -1285,14 +1416,14 @@ def get_dashboard_summary(
             "totalInvestment": total_investment,
             "maxBudget": max_budget
         },
-        "ministryStats": ministry_stats,
+        "ministryStats": ministry_stats_list,
         "latestProjects": latest_projects_data,
-        "otherMinistries": {"projectCount": 0, "totalInvestment": 0},
-        "ministryInvestments": [],
+        "otherMinistries": {"projectCount": 0, "totalInvestment": 0}, # Can implement "Others" logic if list too long
+        "ministryInvestments": ministry_investments_list,
         "otherMinistriesInvestment": {"totalInvestment": 0, "projectCount": 0},
-        "projectScales": {"small": {"count":0, "investment":0}, "medium": {"count":0, "investment":0}, "big": {"count":0, "investment":0}},
-        "investmentByYear": [],
-        "businessGroupStats": [],
-        "sectorCounts": {},
-        "projectScope": {"domestic": {"count":0, "investment":0}, "international": {"count":0, "investment":0}}
+        "projectScales": project_scales,
+        "investmentByYear": investment_by_year_list,
+        "businessGroupStats": business_group_stats,
+        "sectorCounts": {k: v["total"]["count"] for k,v in sector_stats.items()},
+        "projectScope": {"domestic": {"count": total_projects, "investment": total_investment}, "international": {"count": 0, "investment": 0}}
     }

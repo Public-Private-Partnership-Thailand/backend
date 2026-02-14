@@ -808,8 +808,8 @@ class Project(SQLModel, table=True):
     status: Optional[str] = None
     purpose: Optional[str] = None
     
-    project_type_id: Optional[int] = Field(default=None, foreign_key="project_type.id")
-    public_authority_id: Optional[int] = Field(default=None, foreign_key="agency.id")
+    project_type_id: int = Field(foreign_key="project_type.id")
+    public_authority_id: int = Field(foreign_key="agency.id")
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     created_by: Optional[uuid.UUID] = None

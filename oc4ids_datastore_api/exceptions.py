@@ -31,6 +31,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "status": "error",
             "code": "INTERNAL_SERVER_ERROR",
             "message": "An unexpected error occurred.",
+            "detail": str(exc),
             "timestamp": str(logging.Formatter.formatTime(logging.Formatter(None), record=logging.LogRecord(None, None, "", 0, "", (), None))),
         },
     )

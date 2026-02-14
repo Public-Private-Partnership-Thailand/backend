@@ -4,6 +4,9 @@ from typing import Dict, Any, List, Optional
 import json
 import pandas as pd
 from io import BytesIO
+import logging
+
+logger = logging.getLogger(__name__)
 
 from oc4ids_datastore_api.database import get_session
 from oc4ids_datastore_api.services import (
@@ -18,6 +21,8 @@ from oc4ids_datastore_api.services import (
 
 router = APIRouter()
 
+
+# Get all projects
 @router.get("/projects")
 def read_projects(
     page: int = 1, 
@@ -48,56 +53,7 @@ def read_projects(
     )
 
 
-@router.get("/summary")
-def get_summary(
-    search: Optional[str] = None,
-    sector: Optional[str] = Query(None), 
-    sector_id: Optional[str] = Query(None, alias="sector"), 
-    businessGroup: Optional[str] = Query(None),
-    ministry: Optional[str] = Query(None),
-    agency: Optional[str] = Query(None),
-    concessionForm: Optional[str] = Query(None), 
-    contractType: Optional[str] = Query(None),
-    startDate: Optional[str] = None,
-    endDate: Optional[str] = None,
-    session: Session = Depends(get_session)
-) -> Dict[str, Any]:
-    
-    # Helper to parse comma-separated IDs
-    def parse_ids(value: Optional[str]) -> Optional[List[int]]:
-        if not value:
-            return None
-        return [int(x) for x in value.split(',') if x.strip().isdigit()]
-    
-    # Parse dates
-    y_from = None
-    y_to = None
-    if startDate:
-         try:
-             y_from = int(startDate[:4])
-         except: pass
-    if endDate:
-         try:
-             y_to = int(endDate[:4])
-         except: pass
-
-    # Sector mapping: businessGroup or sector param
-    # useSummary sends 'businessGroup' -> maps to sector IDs
-    s_ids = parse_ids(businessGroup) or parse_ids(sector_id) or parse_ids(sector)
-
-    return get_dashboard_summary(
-        session,
-        search=search,
-        sector_id=s_ids,
-        ministry_id=parse_ids(ministry),
-        agency_id=parse_ids(agency),
-        concession_form_id=parse_ids(concessionForm),
-        contract_type_id=parse_ids(contractType),
-        year_from=y_from,
-        year_to=y_to
-    )
-
-
+# Get a single project by ID in frontend format
 @router.get("/projects/{project_id}")
 def read_project(project_id: str, session: Session = Depends(get_session)) -> Dict[str, Any]:
     """Get a single project by ID in frontend format"""
@@ -107,6 +63,13 @@ def read_project(project_id: str, session: Session = Depends(get_session)) -> Di
     return project
 
 
+# Create a new project
+@router.post("/projects")
+def create_project(project_data: Dict[str, Any] = Body(...), session: Session = Depends(get_session)):
+    return create_project_data(project_data, session)
+
+
+# Upload a file
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...), session: Session = Depends(get_session)):
     filename = file.filename
@@ -144,14 +107,67 @@ async def upload_file(file: UploadFile = File(...), session: Session = Depends(g
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/projects")
-def create_project(project_data: Dict[str, Any] = Body(...), session: Session = Depends(get_session)):
-    """
-    Create a new project.
-    Using 'def' (Sync) instead of 'async def' to ensure blocking DB operations 
-    run in a threadpool and don't block the main event loop.
-    """
-    return create_project_data(project_data, session)
+
+# Get summary data for dashboard
+@router.get("/summary")
+def get_summary(
+    search: Optional[str] = None,
+    sector: Optional[str] = Query(None), 
+    sector_id: Optional[str] = Query(None, alias="sector"), 
+    businessGroup: Optional[str] = Query(None),
+    ministry: Optional[str] = Query(None),
+    agency: Optional[str] = Query(None),
+    concessionForm: Optional[str] = Query(None), 
+    contractType: Optional[str] = Query(None),
+    startDate: Optional[str] = None,
+    endDate: Optional[str] = None,
+    session: Session = Depends(get_session)
+) -> Dict[str, Any]:
+    
+    # Helper to parse comma-separated IDs
+    def parse_ids(value: Optional[str]) -> Optional[List[int]]:
+        if not value:
+            return None
+        return [int(x) for x in value.split(',') if x.strip().isdigit()]
+    
+    # Parse dates
+    y_from = None
+    y_to = None
+    if startDate:
+         try:
+             y_from = int(startDate[:4])
+         except: pass
+    if endDate:
+         try:
+             y_to = int(endDate[:4])
+         except: pass
+
+    # Sector mapping: businessGroup or sector param
+    # useSummary sends 'businessGroup' -> maps to sector IDs
+    s_ids = parse_ids(businessGroup) or parse_ids(sector_id) or parse_ids(sector)
+    
+    logger.info(f"Dashboard Summary Request: search={search}, sector_ids={s_ids}, ministry={ministry}")
+
+    result = get_dashboard_summary(
+        session,
+        search=search,
+        sector_id=s_ids,
+        ministry_id=parse_ids(ministry),
+        agency_id=parse_ids(agency),
+        concession_form_id=parse_ids(concessionForm),
+        contract_type_id=parse_ids(contractType),
+        year_from=y_from,
+        year_to=y_to
+    )
+    
+    logger.info(f"Dashboard Summary Result: Total Projects = {result.get('summary', {}).get('totalProjects')}")
+    return result
+
+
+
+
+
+
 
 
 @router.put("/projects/{project_id}")
@@ -164,6 +180,7 @@ def update_project(project_id: str, project_data: Dict[str, Any] = Body(...), se
 def delete_project(project_id: str, session: Session = Depends(get_session)):
     """Delete a project"""
     return delete_project_data(project_id, session)
+
 
 @router.get("/info")
 def get_info(session: Session = Depends(get_session)) -> Dict[str, List[Dict[str, Any]]]:
