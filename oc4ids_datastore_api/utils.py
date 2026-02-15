@@ -23,4 +23,4 @@ def format_thai_amount(amount: float) -> str:
     result = f"{formatted} {unit_suffix}"
     return f"-{result}" if is_negative else result
 
-print(format_thai_amount(1750000000000))  
+#print(format_thai_amount(1750000000000))  

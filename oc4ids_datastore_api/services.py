@@ -38,13 +38,11 @@ logger = logging.getLogger(__name__)
 def _ensure_currency(session: Session, code: str):
     if not code:
         return
-    # Check if exists
     curr = session.get(Currency, code)
     if not curr:
-        # Create new currency reference
         curr = Currency(code=code, name=code)
         session.add(curr)
-        session.flush() # Ensure it exists for FK constraints
+        session.flush()
 
 def _parse_date(date_str: Optional[str]) -> Optional[datetime]:
     if not date_str:
@@ -471,6 +469,7 @@ def _create_project_finance(session: Session, budget_id: int, finance_list: List
              type=fin.get("type"),
              concessional=fin.get("concessional"),
              value_amount=val.get("amount"),
+             #(FIX)In the future I will change currency to a separate table, we already have a table for currency
              value_currency=val.get("currency"),
              source=fin.get("source"),
              financing_party_id=fin.get("financingParty", {}).get("id"),
@@ -640,8 +639,6 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
 
     project_data["id"] = str(pid)
     project_id_str = project_data["id"]
-    project_data["id"] = str(pid)
-    project_id_str = project_data["id"]
     logger.info(f"Creating project data for {project_id_str}")
 
     # 1. Validation
@@ -653,90 +650,56 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
     # except Exception as e:
     #     logger.warning(f"Validation skipped due to error (likely network): {e}")
 
-    # 1. Validation for Mandatory Fields (User Requirement)
     missing_fields = []
 
-    # 1.1 Project Type
-    if not project_data.get("type"):
-        missing_fields.append("Project Type (ประเภทโครงการ)")
-
-    # 1.2 Sector (Business Group) - กลุ่มกิจการ
-    if not project_data.get("sector") or not isinstance(project_data["sector"], list) or len(project_data["sector"]) == 0:
-        missing_fields.append("Business Group/Sector (กลุ่มกิจการ)")
-
-    # 1.3 Project Duration (ระยะเวลาโครงการ)
-    # Check 'period' -> 'durationInDays' or 'startDate'/'endDate' depending on definition
-    # User asked for "Project Duration". Usually this is period object.
     period_data = project_data.get("period", {})
     if not period_data or (not period_data.get("durationInDays") and not (period_data.get("startDate") and period_data.get("endDate"))):
-         # If no explicit duration, and no start/end date to calculate it, consider it missing.
-         # Or strictly check 'durationInDays' if that's what front-end sends.
-         # Let's check generally for period existence and meaningful data
-         missing_fields.append("Project Duration (ระยะเวลาโครงการ)")
+         missing_fields.append("period")
 
-    # 1.4 Public Authority (Owner Agency) & 1.5 Private Party
+    if "publicAuthority" not in project_data or not project_data.get("publicAuthority", {}).get("name"):
+        missing_fields.append("publicAuthority")
+    
     parties_list = project_data.get("parties", [])
-    has_public_authority = False
     has_private_party = False
     
     for p in parties_list:
-        roles = p.get("roles", [])
-        if "publicAuthority" in roles or "actingPublicAuthority" in roles:
-            has_public_authority = True
-        
-        # Check for Private Party roles (contractor, supplier, tenderer, or explicit privateParty)
-        # Based on get_summaries, it looks for 'contractor'.
-        if any(r in ["contractor", "supplier", "tenderer", "privateParty"] for r in roles):
+        identifier = p.get("identifier", {})
+        if identifier.get("legalName"):
             has_private_party = True
-
-    if not has_public_authority:
-        missing_fields.append("Public Authority/Owner Agency (หน่วยงานเจ้าของโครงการ)")
+            break
     
     if not has_private_party:
-        missing_fields.append("Private Party (เอกชนคู่สัญญา)")
+        missing_fields.append("privateParty")
 
     if missing_fields:
         error_msg = f"Missing mandatory fields: {', '.join(missing_fields)}"
         logger.error(f"Validation failed for project {project_id_str}: {error_msg}")
         raise HTTPException(status_code=400, detail=error_msg)
 
-    # 2. Main Model Data
     model_data = {}
     valid_columns = ["id", "title", "description", "status", "purpose"]
     for col in valid_columns:
         if col in project_data:
             model_data[col] = project_data[col]
     
-    # Project Type is now mandatory and validated
     pt = _get_or_create_ref(session, ProjectType, "code", project_data["type"], {"name_en": project_data["type"]})
     model_data["project_type_id"] = pt.id
 
-    # Public Authority is now mandatory and validated
-    # We need to find the specific party again to get the name
-    public_authority_party = None
-    for p in parties_list:
-        roles = p.get("roles", [])
-        if "publicAuthority" in roles or "actingPublicAuthority" in roles:
-            public_authority_party = p
-            break
-            
-    if public_authority_party:
-        pa_name = public_authority_party.get("name")
+    if "publicAuthority" in project_data:
+        pa_data = project_data["publicAuthority"]
+        pa_name = pa_data.get("name")
         if pa_name:
             agency = _get_or_create_ref(session, Agency, "name_th", pa_name, {"name_en": pa_name})
             model_data["public_authority_id"] = agency.id
         else:
-             # Should technically be caught by validation if name missing, but let's be safe
-             raise HTTPException(status_code=400, detail="Public Authority party exists but has no name.")
+            raise HTTPException(status_code=400, detail="Public Authority exists but has no name.")
 
     db_project = Project(**model_data)
 
-    # Save Project
     session.add(db_project)
     session.flush()
     
-    # 3. Handle Relationships
-    
+
     # - Identifiers
     if input_id:
         pid_obj = ProjectIdentifier(
@@ -749,8 +712,16 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
     # - Sectors
     if "sector" in project_data and isinstance(project_data["sector"], list):
         for s_code in project_data["sector"]:
-             sector_obj = _get_or_create_ref(session, Sector, "code", s_code, {"name_en": s_code, "category": "General", "name_th": s_code})
-             db_project.sectors.append(sector_obj)
+            stmt = select(Sector).where(Sector.code == s_code)
+            sector_obj = session.exec(stmt).first()
+            
+            if not sector_obj:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Sector with code '{s_code}' not found in database. Please use a valid sector code."
+                )
+            
+            db_project.sectors.append(sector_obj)
 
     # - Additional Classifications
     if "additionalClassifications" in project_data:
@@ -809,7 +780,6 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
     # - Budget
     if "budget" in project_data:
         b_data = project_data["budget"]
-        # Handle 'amount' which might be an object
         amt_val = None
         curr_code = None
         
@@ -818,9 +788,8 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
                 amt_val = b_data["amount"].get("amount")
                 curr_code = b_data["amount"].get("currency")
             else:
-                 # Flattened input?
-                 amt_val = b_data.get("amount")
-                 curr_code = b_data.get("currency")
+                amt_val = b_data.get("amount")
+                curr_code = b_data.get("currency")
 
         if curr_code:
             _ensure_currency(session, curr_code)
@@ -836,24 +805,6 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
         session.add(b_obj)
         session.flush()
 
-        # Handle Breakdowns if present
-        
-        # 1. Flattened "breakdown" list (Legacy/Flat format)
-        flat_breakdown = b_data.get("breakdown", [])
-        if flat_breakdown:
-             # Create a default group for flat items
-             default_group = BudgetBreakdown(
-                 budget_id=b_obj.id,
-                 local_id=str(uuid.uuid4()),
-                 description="Breakdown"
-             )
-             session.add(default_group)
-             session.flush()
-             
-             for item_data in flat_breakdown:
-                 _create_breakdown_item(session, default_group.id, item_data)
-
-        # 2. Nested "budgetBreakdowns" (OC4IDS 0.9 format)
         if "budgetBreakdowns" in b_data:
              for group in b_data["budgetBreakdowns"]:
                   group_obj = BudgetBreakdown(
@@ -866,9 +817,6 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
 
                   # Process items in this group
                   items = group.get("budgetBreakdown", [])
-                  for item_data in items:
-                       _create_breakdown_item(session, group_obj.id, item_data)
-
                   for item_data in items:
                        _create_breakdown_item(session, group_obj.id, item_data)
 
@@ -902,10 +850,9 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
              )
              session.add(p_obj)
 
-    # - Identifiers (Original List)
+    # - Identifiers
     if "identifiers" in project_data and isinstance(project_data["identifiers"], list):
         for ident in project_data["identifiers"]:
-            # Skip if matched previously? No, OC4IDS allows multiple
             pid_obj = ProjectIdentifier(
                 project_id=db_project.id,
                 identifier_value=ident.get("id"),
@@ -934,7 +881,7 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
             )
             session.add(rp_obj)
 
-    # - Nested Objects
+    #(REVIEW) I will review this part later
     if "costMeasurements" in project_data:
         _create_cost_measurements(session, db_project.id, project_data["costMeasurements"])
     
@@ -964,19 +911,19 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
         
     if "assetLifetime" in project_data:
         _create_asset_lifetime(session, db_project.id, project_data["assetLifetime"])
+    #(end of REVIEW)
+
 
     # - Parties (Full Details)
+    parties_list = project_data.get("parties", [])
     for party in parties_list:
         legal_name = party.get("identifier", {}).get("legalName")
-        if not legal_name and "additionalIdentifiers" in party:
-            for ai in party["additionalIdentifiers"]:
-                if ai.get("legalName"):
-                    legal_name = ai.get("legalName")
-                    break
-        ministry_id = None
+    
+        agency_id = None
         if legal_name:
+            #(FIX) I this case agency should create if not exist ministry and add id to ministry_id in agency table
             agency_obj = _get_or_create_ref(session, Agency, "name_th", legal_name, {"name_en": legal_name})
-            ministry_id = agency_obj.id
+            agency_id = agency_obj.id
 
         p_obj = ProjectParty(
             project_id=db_project.id,
@@ -985,7 +932,7 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
             identifier_scheme=party.get("identifier", {}).get("scheme"),
             identifier_value=party.get("identifier", {}).get("id"),
             identifier_uri=party.get("identifier", {}).get("uri"),
-            identifier_legal_name_id=ministry_id,
+            identifier_legal_name_id=agency_id,
             street_address=party.get("address", {}).get("streetAddress"),
             locality=party.get("address", {}).get("locality"),
             region=party.get("address", {}).get("region"),
@@ -995,7 +942,10 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
             contact_email=party.get("contactPoint", {}).get("email"),
             contact_telephone=party.get("contactPoint", {}).get("telephone"),
             contact_fax=party.get("contactPoint", {}).get("fax"),
-            contact_url=party.get("contactPoint", {}).get("url")
+            contact_url=party.get("contactPoint", {}).get("url"),
+            role=party.get("role")
+            #(FIX) Add new field people beneficialOwner,Classification
+            
         )
         session.add(p_obj)
         session.flush()
@@ -1020,6 +970,7 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
         # Create nested party details
         _create_party_details(session, p_obj.id, party)
 
+    #(REVIEW) I will review this part later
     # - Contracting Processes
     for cp in project_data.get("contractingProcesses", []):
         summary = cp.get("summary", {})
@@ -1117,6 +1068,7 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
         
         # Social & Releases
         _create_contracting_details(session, cp_obj.id, summary)
+    #(end of REVIEW)
 
     # Commit all changes
     try:
