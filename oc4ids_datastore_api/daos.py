@@ -102,6 +102,9 @@ class ProjectDAO:
                 # Aggregated columns
                 func.string_agg(Ministry.name_en.distinct(), ', ').label("party_ministry_names"),
                 func.string_agg(PartyAgency.name_en.distinct(), ', ').label("private_party_name"),
+func.array_agg(Sector.name_en.distinct()).label("sector_names"),
+func.array_agg(AdditionalClassification.description.distinct()).label("concession_names"),
+                func.min(ProjectPeriod.start_date).label("start_date"),
             )
             .filter(Project.id.in_(project_ids)) # Filter by pre-selected IDs
             
@@ -113,6 +116,14 @@ class ProjectDAO:
             .join(Ministry, PartyAdditionalIdentifier.legal_name_id == Ministry.id, isouter=True)
             #agency
             .join(PartyAgency, ProjectParty.identifier_legal_name_id == PartyAgency.id, isouter=True)
+            #sector
+            .join(ProjectSectorLink, Project.id == ProjectSectorLink.project_id, isouter=True)
+            .join(Sector, ProjectSectorLink.sector_id == Sector.id, isouter=True)
+            #concession
+            .join(ProjectAdditionalClassificationLink, Project.id == ProjectAdditionalClassificationLink.project_id, isouter=True)
+            .join(AdditionalClassification, ProjectAdditionalClassificationLink.classification_id == AdditionalClassification.id, isouter=True)
+            #start_date
+            .join(ProjectPeriod, Project.id == ProjectPeriod.project_id, isouter=True)
         )
         
         statement = statement.group_by(Project.id, Project.title, Agency.name_en)

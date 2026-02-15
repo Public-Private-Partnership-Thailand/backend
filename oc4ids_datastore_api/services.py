@@ -585,6 +585,9 @@ def get_all_projects(
             "ministry": ministry_list,
             "public_authority": row.agency_name, 
             "private_parties": private_parties,
+            "sector": row.sector_names,
+            "concession": row.concession_names,
+            "start_date": row.start_date,
         })
     
     return {
