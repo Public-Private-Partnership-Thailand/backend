@@ -540,32 +540,27 @@ def _create_asset_lifetime(session: Session, project_id: uuid.UUID, lifetime_dat
     ))
 
 
-def get_all_projects_summary(
+def get_all_projects(
     session: Session, 
     page: int = 1, 
     page_size: int = 20,
     title: Optional[str] = None,
     sector_id: Optional[List[int]] = None,
     ministry_id: Optional[List[int]] = None,
-    agency_id: Optional[List[int]] = None,
     concession_form_id: Optional[List[int]] = None,
-    contract_type_id: Optional[List[int]] = None,
     year_from: Optional[int] = None,
     year_to: Optional[int] = None
 ) -> Dict[str, Any]:
-    """Get project summaries for the list view (Optimized)"""
     dao = ProjectDAO(session)
     skip = (page - 1) * page_size
     
-    results = dao.get_summaries(
+    results = dao.get_projects(
         skip=skip, 
         limit=page_size,
         title=title,
         sector_id=sector_id,
         ministry_id=ministry_id,
-        agency_id=agency_id,
         concession_form_id=concession_form_id,
-        contract_type_id=contract_type_id,
         year_from=year_from,
         year_to=year_to
     )
@@ -573,62 +568,23 @@ def get_all_projects_summary(
     
     data = []
     for row in results:
-        # Process Ministries (Party + Agency)
         ministries = set()
         if hasattr(row, 'party_ministry_names') and row.party_ministry_names:
             ministries.update([m.strip() for m in row.party_ministry_names.split(',') if m.strip()])
-        if hasattr(row, 'agency_ministry_names') and row.agency_ministry_names:
-            ministries.update([m.strip() for m in row.agency_ministry_names.split(',') if m.strip()])
-        
-        # Frontend expects 'ministry' list of strings for display?
-        # Projects page Line 711: project.additionalClassifications.find(TH-MINISTRY).description
-        # So we need to populate additionalClassifications.
-        
+            
         ministry_list = list(ministries)
-        
-        ministry_classifications = [
-            {"scheme": "TH-MINISTRY", "description": m} for m in ministry_list
-        ]
         
         # Process Private Parties
         private_parties = []
         if getattr(row, "private_party_name", None):
-             private_parties = list(set([p.strip() for p in row.private_party_name.split(',') if p.strip()]))
-
-        # Process Sectors
-        sectors = []
-        if hasattr(row, 'sector_names') and row.sector_names:
-            sectors = list(set([s.strip() for s in row.sector_names.split(',') if s.strip()]))
-
-        # Process Contract Types (identifiers)
-        contract_types = []
-        if hasattr(row, 'contract_type_names') and row.contract_type_names:
-            contract_types = list(set([c.strip() for c in row.contract_type_names.split(',') if c.strip()]))
-            
-        identifiers = [
-            {"scheme": "TH-PPP-TYPE", "id": c} for c in contract_types
-        ]
+             private_parties = [p.strip() for p in row.private_party_name.split(",") if p.strip()]
 
         data.append({
             "id": str(row.id),
             "title": row.title,
-            "ministry": ministry_list, # Kept for backward compatibility if used elsewhere
-            "additionalClassifications": ministry_classifications,
-            "public_authority": row.agency_name, # Return string to match frontend expectation
+            "ministry": ministry_list,
+            "public_authority": row.agency_name, 
             "private_parties": private_parties,
-            "parties": [{"name": p, "roles": ["contractor"]} for p in private_parties], 
-            # Frontend line 721: project.parties.filter(contractor).map(name).
-            # So I must return parties list with roles.
-            
-            "sector": sectors,
-            "identifiers": identifiers,
-            
-            # Needed columns for display
-            "description": "", # Placeholder
-            "period": {
-                "startDate": row.period_start_date.isoformat() if hasattr(row, 'period_start_date') and row.period_start_date else "",
-                "endDate": row.period_end_date.isoformat() if hasattr(row, 'period_end_date') and row.period_end_date else ""
-            },
         })
     
     return {
@@ -642,7 +598,7 @@ def get_all_projects_summary(
     }
 
 def get_project_by_id(session: Session, project_id: str) -> Optional[Dict[str, Any]]:
-    """Get a single project by ID and convert to frontend format"""
+    """Get a single project by ID and convert to frontline format"""
     dao = ProjectDAO(session)
     project = dao.get_by_id(project_id)
     if not project:

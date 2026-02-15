@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 from oc4ids_datastore_api.database import get_session
 from oc4ids_datastore_api.services import (
-    get_all_projects_summary,
+    get_all_projects,
     get_project_by_id,
     create_project_data,
     update_project_data,
@@ -30,24 +30,20 @@ def read_projects(
     title: Optional[str] = None,
     sector_id: Optional[List[int]] = Query(None),
     ministry_id: Optional[List[int]] = Query(None),
-    agency_id: Optional[List[int]] = Query(None),
-    concession_form: Optional[List[int]] = Query(None),
-    contractType: Optional[List[int]] = Query(None),
+    concession_form_id: Optional[List[int]] = Query(None),
     year_from: Optional[int] = None,
     year_to: Optional[int] = None,
     session: Session = Depends(get_session)
 ) -> Dict[str, Any]:
     """Get all projects with pagination and filters (supports multiple IDs)"""
-    return get_all_projects_summary(
+    return get_all_projects(
         session, 
         page, 
         page_size,
         title=title,
         sector_id=sector_id,
         ministry_id=ministry_id,
-        agency_id=agency_id,
-        concession_form_id=concession_form,
-        contract_type_id=contractType,
+        concession_form_id=concession_form_id,
         year_from=year_from,
         year_to=year_to
     )
