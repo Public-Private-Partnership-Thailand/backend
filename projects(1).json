@@ -40,7 +40,14 @@
                         "scheme": "TH-PPP",
                         "id": "org-1",
                         "legalName": "การทางพิเศษแห่งประเทศไทย (กทพ.)"
-                    }
+                    },
+                    "additionalClassifications": [
+                        {
+                            "scheme": "TH-MINISTRY",
+                            "id": "กระทรวงคมนาคม",
+                            "description": "กระทรวงคมนาคม"
+                        }
+                    ]
                 },
                 {
                     "id": "org-2",
@@ -63,14 +70,7 @@
                     "currency": "THB"
                 }
             },
-            "additionalClassifications": [
-                {
-                    "scheme": "TH-MINISTRY",
-                    "id": "กระทรวงคมนาคม",
-                    "description": "กระทรวงคมนาคม"
-                }
-            ],
-            "identifiers": [
+            "addidentifiers": [
                 {
                     "scheme": "TH-PPP-TYPE",
                     "id": "BTO",

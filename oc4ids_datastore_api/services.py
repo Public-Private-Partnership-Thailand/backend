@@ -712,25 +712,18 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
     # - Sectors
     if "sector" in project_data and isinstance(project_data["sector"], list):
         for s_data in project_data["sector"]:
-            if isinstance(s_data, dict):
-                s_code = s_data.get("id")
-                s_description = s_data.get("description", "")
-            else:
-                s_code = s_data
-                s_description = ""
-            
-            stmt = select(Sector).where(Sector.code == s_code)
+            stmt = select(Sector).where(Sector.code == s_data)
             sector_obj = session.exec(stmt).first()
             
             #(FIX) In the future I will remove this part only allow existing sectors
             if not sector_obj:
                 sector_obj = Sector(
-                    code=s_code,
-                    name_th=s_description,  # ใช้ description เป็น name_th
-                    name_en=s_code,
-                    description=s_description,
+                    code=s_data,
+                    name_th=s_data,  # ใช้ description เป็น name_th
+                    name_en=s_data,
+                    description=s_data,
                     is_active=True,
-                    category=s_data.get("category", "") if isinstance(s_data, dict) else ""
+                    category=s_data
                 )
                 session.add(sector_obj)
                 session.flush()
@@ -1155,10 +1148,11 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
     ministries = dao.get_ministries()
     project_types = dao.get_project_types()
     concession_forms = dao.get_concession_forms()
+    contact_types = dao.get_contact_types()
     
     return {
         "sector": [
-            {"id": s.id, "value": s.name_th}
+            {"id": s.id, "value": s.code}
             for s in sectors
         ],
         "ministry": [
@@ -1166,12 +1160,16 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
             for m in ministries
         ],
         "projectType": [
-            {"id": pt.id, "value": pt.name_th if pt.name_th else pt.code}
+            {"id": pt.id, "value": pt.code}
             for pt in project_types
         ],
         "concessionForm": [
             {"id": cf.id, "value": cf.description or cf.code}
             for cf in concession_forms
+        ],
+        "contactType": [
+            {"id": ct.id, "value": ct.description or ct.code}
+            for ct in contact_types
         ]
     }
 

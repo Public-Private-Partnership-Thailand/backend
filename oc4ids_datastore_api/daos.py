@@ -102,8 +102,11 @@ class ProjectDAO:
                 # Aggregated columns
                 func.string_agg(Ministry.name_en.distinct(), ', ').label("party_ministry_names"),
                 func.string_agg(PartyAgency.name_en.distinct(), ', ').label("private_party_name"),
-func.array_agg(Sector.name_en.distinct()).label("sector_names"),
-func.array_agg(AdditionalClassification.description.distinct()).label("concession_names"),
+                func.array_agg(Sector.name_en.distinct()).label("sector_names"),
+                # Concession Forms Only
+                func.array_agg(
+                    AdditionalClassification.description.distinct()
+                ).filter(AdditionalClassification.scheme == 'รูปแบบสัมปทานหรือค่าตอบแทน').label("concession_names"),
                 func.min(ProjectPeriod.start_date).label("start_date"),
             )
             .filter(Project.id.in_(project_ids)) # Filter by pre-selected IDs
@@ -119,7 +122,7 @@ func.array_agg(AdditionalClassification.description.distinct()).label("concessio
             #sector
             .join(ProjectSectorLink, Project.id == ProjectSectorLink.project_id, isouter=True)
             .join(Sector, ProjectSectorLink.sector_id == Sector.id, isouter=True)
-            #concession
+
             .join(ProjectAdditionalClassificationLink, Project.id == ProjectAdditionalClassificationLink.project_id, isouter=True)
             .join(AdditionalClassification, ProjectAdditionalClassificationLink.classification_id == AdditionalClassification.id, isouter=True)
             #start_date
@@ -179,5 +182,18 @@ class ReferenceDataDAO:
         """Fetch concession forms from additional_classifications"""
         from oc4ids_datastore_api.models import AdditionalClassification
         return self.session.exec(
-            select(AdditionalClassification).distinct()
+            select(AdditionalClassification)
+            .where(AdditionalClassification.scheme == "รูปแบบสัมปทานหรือค่าตอบแทน")
+            .distinct()
         ).all()
+
+    def get_contact_types(self) -> List:
+        """Fetch contact types from additional_classifications"""
+        from oc4ids_datastore_api.models import AdditionalClassification
+        return self.session.exec(
+            select(AdditionalClassification)
+            .where(AdditionalClassification.scheme == "รูปแบบการจัดสรรกรรมสิทธิ์")
+            .distinct()
+        ).all()
+    
+

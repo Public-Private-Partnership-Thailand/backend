@@ -5,3 +5,38 @@ INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 INFO:oc4ids_datastore_api.middleware:PERFORMANCE: HEAD /docs - Status: 200 - Time: 0.31ms
 INFO:     127.0.0.1:51588 - "HEAD /docs HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 188.57ms
+INFO:     127.0.0.1:37426 - "GET /api/v1/projects?sector_id=1&sector_id=3 HTTP/1.1" 200 OK
+WARNING:oc4ids_datastore_api.services:Project ID 'None' is not a valid UUID. Generated new ID: 2a21e95c-d0b9-41bc-ba39-496fc652bd88
+INFO:oc4ids_datastore_api.services:Creating project data for 2a21e95c-d0b9-41bc-ba39-496fc652bd88
+INFO:oc4ids_datastore_api.services:Successfully committed project 2a21e95c-d0b9-41bc-ba39-496fc652bd88
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: POST /api/v1/projects - Status: 200 - Time: 161.72ms
+INFO:     127.0.0.1:57036 - "POST /api/v1/projects HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 11.21ms
+INFO:     127.0.0.1:44640 - "GET /api/v1/projects?sector_id=1&sector_id=3 HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 4.88ms
+INFO:     127.0.0.1:47230 - "GET /api/v1/projects?sector_id=1&sector_id=3&title=test HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 6.39ms
+INFO:     127.0.0.1:60600 - "GET /api/v1/projects?title=test HTTP/1.1" 200 OK
+WARNING:oc4ids_datastore_api.services:Project ID 'None' is not a valid UUID. Generated new ID: 01a1d322-619d-41c0-90b3-44317ccfbd34
+INFO:oc4ids_datastore_api.services:Creating project data for 01a1d322-619d-41c0-90b3-44317ccfbd34
+INFO:oc4ids_datastore_api.services:Successfully committed project 01a1d322-619d-41c0-90b3-44317ccfbd34
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: POST /api/v1/projects - Status: 200 - Time: 50.10ms
+INFO:     127.0.0.1:32768 - "POST /api/v1/projects HTTP/1.1" 200 OK
+WARNING:oc4ids_datastore_api.services:Project ID 'None' is not a valid UUID. Generated new ID: 4f7bb482-6a97-4bb3-9b86-cfaa55965254
+INFO:oc4ids_datastore_api.services:Creating project data for 4f7bb482-6a97-4bb3-9b86-cfaa55965254
+INFO:oc4ids_datastore_api.services:Successfully committed project 4f7bb482-6a97-4bb3-9b86-cfaa55965254
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: POST /api/v1/projects - Status: 200 - Time: 27.89ms
+INFO:     127.0.0.1:32768 - "POST /api/v1/projects HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 9.27ms
+INFO:     127.0.0.1:38762 - "GET /api/v1/projects?title=test HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 12.02ms
+INFO:     127.0.0.1:57210 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 7.54ms
+INFO:     127.0.0.1:58126 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 10.39ms
+INFO:     127.0.0.1:58126 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 6.00ms
+INFO:     127.0.0.1:43560 - "GET /api/v1/projects HTTP/1.1" 200 OK
+INFO:oc4ids_datastore_api.middleware:PERFORMANCE: GET /api/v1/projects - Status: 200 - Time: 7.14ms
+INFO:     127.0.0.1:43560 - "GET /api/v1/projects HTTP/1.1" 200 OK
