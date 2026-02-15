@@ -147,7 +147,7 @@ class ProjectDAO:
         self.session.refresh(project)
         return project
 
-    def delete(self, project_id: str) -> None:
+    def delete(self, project_id: str, hard_delete: bool = False) -> None:
         from datetime import datetime
         
         project = self.session.get(Project, project_id)
@@ -155,8 +155,12 @@ class ProjectDAO:
         if not project:
             raise ValueError(f"Project with ID {project_id} not found")
             
-        project.deleted_at = datetime.utcnow()
-        self.session.add(project)
+        if hard_delete:
+            self.session.delete(project)
+        else:
+            project.deleted_at = datetime.utcnow()
+            self.session.add(project)
+            
         self.session.commit()
 
 class ReferenceDataDAO:

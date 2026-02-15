@@ -1093,7 +1093,6 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
 def update_project_data(project_id: str, project_data: Dict[str, Any], session: Session) -> Dict[str, Any]:
     """Updates an existing project by deleting and recreating it"""
     logger.info(f"Starting update for project {project_id}")
-    # 1. Verify existence and consistency
     dao = ProjectDAO(session)
     existing_project = dao.get_by_id(project_id)
     
@@ -1101,13 +1100,10 @@ def update_project_data(project_id: str, project_data: Dict[str, Any], session: 
         logger.error(f"Project {project_id} not found during update")
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
-    # 2. Delete existing project
-    # This will cascade delete all related records due to ON DELETE CASCADE or manual cleanup in DAO
-    # We call delete directly. delete() method handles existence check internally.
     try:
         logger.info(f"Deleting existing project {project_id}")
-        dao.delete(project_id)
-        logger.info(f"Deleted existing project {project_id}")
+        dao.delete(project_id, hard_delete=True)
+        logger.info(f"Deleted existing project {project_id} (Hard Delete)")
     except ValueError as e:
          logger.error(f"Error deleting project {project_id}: {e}")
          raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
@@ -1115,11 +1111,9 @@ def update_project_data(project_id: str, project_data: Dict[str, Any], session: 
          logger.error(f"Unexpected error deleting project {project_id}: {e}")
          raise e
     
-    # Ensure session is clean for new insertion
     session.expire_all()
     
-    # 3. Create new project with the same ID
-    # Ensure ID in data matches the URL endpoint ID
+
     project_data["id"] = project_id
     
     logger.info(f"Re-creating project {project_id} with new data")
