@@ -16,10 +16,10 @@ logging.basicConfig(level=logging.INFO)
 
 def import_data_direct():
     try:
-        with open('example.json', 'r') as f:
+        with open('projects(1).json', 'r') as f:
             data = json.load(f)
     except FileNotFoundError:
-        print("Error: example.json not found.")
+        print("Error: projects(1).json not found.")
         return
 
     projects = data.get('projects', [])

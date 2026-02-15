@@ -711,15 +711,29 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
 
     # - Sectors
     if "sector" in project_data and isinstance(project_data["sector"], list):
-        for s_code in project_data["sector"]:
+        for s_data in project_data["sector"]:
+            if isinstance(s_data, dict):
+                s_code = s_data.get("id")
+                s_description = s_data.get("description", "")
+            else:
+                s_code = s_data
+                s_description = ""
+            
             stmt = select(Sector).where(Sector.code == s_code)
             sector_obj = session.exec(stmt).first()
             
+            #(FIX) In the future I will remove this part only allow existing sectors
             if not sector_obj:
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"Sector with code '{s_code}' not found in database. Please use a valid sector code."
+                sector_obj = Sector(
+                    code=s_code,
+                    name_th=s_description,  # ใช้ description เป็น name_th
+                    name_en=s_code,
+                    description=s_description,
+                    is_active=True,
+                    category=s_data.get("category", "") if isinstance(s_data, dict) else ""
                 )
+                session.add(sector_obj)
+                session.flush()
             
             db_project.sectors.append(sector_obj)
 

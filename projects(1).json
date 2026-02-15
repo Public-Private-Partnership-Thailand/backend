@@ -1,0 +1,860 @@
+{
+    "projects": [
+        {
+            "id": "ppp-001",
+            "title": "โครงการระบบทางด่วนขั้นที่ 2 (ทางพิเศษศรีรัช ส่วน A B C D)",
+            "description": "โครงการระบบทางด่วนขั้นที่ 2 (ทางพิเศษศรีรัช ส่วน A B C D) - โครงการร่วมลงทุนระหว่างรัฐและเอกชน",
+            "status": "completed",
+            "type": "ทางพิเศษ",
+            "purpose": "โครงการ(1) ถนน ทางหลวง ทางพิเศษ การขนส่งทางถนน",
+            "language": "th",
+            "updated": "2025-12-10T18:29:03.984468",
+            "period": {
+                "startDate": "1988-12-22",
+                "endDate": "2018-12-22"
+            },
+            "implementationPeriod": {
+                "startDate": "1988-12-22",
+                "endDate": "2018-12-22"
+            },
+            "sector": [
+                {
+                    "scheme": "TH-PPP",
+                    "id": "transport.road",
+                    "description": "(1) ถนน ทางหลวง ทางพิเศษ การขนส่งทางถนน"
+                }
+            ],
+            "publicAuthority": {
+                "id": "org-1",
+                "name": "การทางพิเศษแห่งประเทศไทย (กทพ.)"
+            },
+            "parties": [
+                {
+                    "id": "org-1",
+                    "name": "การทางพิเศษแห่งประเทศไทย (กทพ.)",
+                    "roles": [
+                        "publicAuthority",
+                        "procuringEntity"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-1",
+                        "legalName": "การทางพิเศษแห่งประเทศไทย (กทพ.)"
+                    }
+                },
+                {
+                    "id": "org-2",
+                    "name": "บริษัท ทางด่วนกรุงเทพจำกัด (BECL)",
+                    "roles": [
+                        "privateParty",
+                        "contractor"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-2",
+                        "legalName": "บริษัท ทางด่วนกรุงเทพจำกัด (BECL)"
+                    }
+                }
+            ],
+            "budget": {
+                "description": "มูลค่าโครงการทั้งหมด",
+                "amount": {
+                    "amount": 16950000000.0,
+                    "currency": "THB"
+                }
+            },
+            "additionalClassifications": [
+                {
+                    "scheme": "TH-MINISTRY",
+                    "id": "กระทรวงคมนาคม",
+                    "description": "กระทรวงคมนาคม"
+                }
+            ],
+            "identifiers": [
+                {
+                    "scheme": "TH-PPP-TYPE",
+                    "id": "BTO",
+                    "legalName": "โครงการระบบทางด่วนขั้นที่ 2 (ทางพิเศษศรีรัช ส่วน A B C D)"
+                }
+            ],
+            "documents": [
+                {
+                    "id": "doc-001",
+                    "documentType": "projectDetails",
+                    "title": "ข้อมูลโครงการ",
+                    "description": "ข้อมูลโครงการจากเว็บไซต์ สคร.",
+                    "url": "https://ppp.sepo.go.th/content/147"
+                }
+            ]
+        },
+        {
+            "id": "ppp-002",
+            "title": "โครงการทางหลวงสัมปทานในทางหลวงแผ่นดินหมายเลข 31 ถนนวิภาวดีรังสิต ตอนดินแดง-ดอนเมือง และทางหลวงสัมปทาน ตอนต่อขยายทางด้านทิศเหนือ",
+            "description": "โครงการทางหลวงสัมปทานในทางหลวงแผ่นดินหมายเลข 31 ถนนวิภาวดีรังสิต ตอนดินแดง-ดอนเมือง และทางหลวงสัมปทาน ตอนต่อขยายทางด้านทิศเหนือ - โครงการร่วมลงทุนระหว่างรัฐและเอกชน",
+            "status": "completed",
+            "type": "ทางหลวง",
+            "purpose": "โครงการ(1) ถนน ทางหลวง ทางพิเศษ การขนส่งทางถนน",
+            "language": "th",
+            "updated": "2025-12-10T18:29:03.984438",
+            "period": {
+                "startDate": "1989-08-21",
+                "endDate": "2014-08-21"
+            },
+            "implementationPeriod": {
+                "startDate": "1989-08-21",
+                "endDate": "2014-08-21"
+            },
+            "sector": [
+                {
+                    "scheme": "TH-PPP",
+                    "id": "transport.road",
+                    "description": "(1) ถนน ทางหลวง ทางพิเศษ การขนส่งทางถนน"
+                }
+            ],
+            "publicAuthority": {
+                "id": "org-1",
+                "name": "กรมทางหลวง"
+            },
+            "parties": [
+                {
+                    "id": "org-1",
+                    "name": "กรมทางหลวง",
+                    "roles": [
+                        "publicAuthority",
+                        "procuringEntity"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-1",
+                        "legalName": "กรมทางหลวง"
+                    }
+                },
+                {
+                    "id": "org-2",
+                    "name": "บริษัท ดอนเมืองโทล์ลเวย์ จำกัด",
+                    "roles": [
+                        "privateParty",
+                        "contractor"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-2",
+                        "legalName": "บริษัท ดอนเมืองโทล์ลเวย์ จำกัด"
+                    }
+                }
+            ],
+            "budget": {
+                "description": "มูลค่าโครงการทั้งหมด",
+                "amount": {
+                    "amount": 13400000000.0,
+                    "currency": "THB"
+                }
+            },
+            "additionalClassifications": [
+                {
+                    "scheme": "TH-MINISTRY",
+                    "id": "กระทรวงคมนาคม",
+                    "description": "กระทรวงคมนาคม"
+                }
+            ],
+            "identifiers": [
+                {
+                    "scheme": "TH-PPP-TYPE",
+                    "id": "BOT (ช่วงแรก)\nBTO (ช่วงหลัง)",
+                    "legalName": "โครงการทางหลวงสัมปทานในทางหลวงแผ่นดินหมายเลข 31 ถนนวิภาวดีรังสิต ตอนดินแดง-ดอนเมือง และทางหลวงสัมปทาน ตอนต่อขยายทางด้านทิศเหนือ"
+                }
+            ],
+            "documents": [
+                {
+                    "id": "doc-001",
+                    "documentType": "projectDetails",
+                    "title": "ข้อมูลโครงการ",
+                    "description": "ข้อมูลโครงการจากเว็บไซต์ สคร.",
+                    "url": "https://ppp.sepo.go.th/content/173"
+                }
+            ]
+        },
+        {
+            "id": "ppp-003",
+            "title": "โครงการระบบขนส่งมวลชนกรุงเทพมหานคร (รถไฟฟ้าสายสีเขียว)",
+            "description": "โครงการระบบขนส่งมวลชนกรุงเทพมหานคร (รถไฟฟ้าสายสีเขียว) - โครงการร่วมลงทุนระหว่างรัฐและเอกชน",
+            "status": "completed",
+            "type": "รถไฟฟ้า",
+            "purpose": "โครงการ(2) รถไฟ รถไฟฟ้า การขนส่งทางราง",
+            "language": "th",
+            "updated": "2025-12-10T18:29:03.984998",
+            "period": {
+                "startDate": "1992-04-09",
+                "endDate": "2022-04-09"
+            },
+            "implementationPeriod": {
+                "startDate": "1992-04-09",
+                "endDate": "2022-04-09"
+            },
+            "sector": [
+                {
+                    "scheme": "TH-PPP",
+                    "id": "transport.rail",
+                    "description": "(2) รถไฟ รถไฟฟ้า การขนส่งทางราง"
+                }
+            ],
+            "publicAuthority": {
+                "id": "org-1",
+                "name": "กรุงเทพมหานคร (กทม.)"
+            },
+            "parties": [
+                {
+                    "id": "org-1",
+                    "name": "กรุงเทพมหานคร (กทม.)",
+                    "roles": [
+                        "publicAuthority",
+                        "procuringEntity"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-1",
+                        "legalName": "กรุงเทพมหานคร (กทม.)"
+                    }
+                },
+                {
+                    "id": "org-2",
+                    "name": "บริษัท ระบบขนส่งมวลชนกรุงเทพ จำกัด (BTSC)",
+                    "roles": [
+                        "privateParty",
+                        "contractor"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-2",
+                        "legalName": "บริษัท ระบบขนส่งมวลชนกรุงเทพ จำกัด (BTSC)"
+                    }
+                }
+            ],
+            "budget": {
+                "description": "มูลค่าโครงการทั้งหมด",
+                "amount": {
+                    "amount": 86203450000.0,
+                    "currency": "THB"
+                }
+            },
+            "additionalClassifications": [
+                {
+                    "scheme": "TH-MINISTRY",
+                    "id": "กระทรวงมหาดไทย",
+                    "description": "กระทรวงมหาดไทย"
+                }
+            ],
+            "identifiers": [
+                {
+                    "scheme": "TH-PPP-TYPE",
+                    "id": "BTO/BOT",
+                    "legalName": "โครงการระบบขนส่งมวลชนกรุงเทพมหานคร (รถไฟฟ้าสายสีเขียว)"
+                }
+            ],
+            "documents": [
+                {
+                    "id": "doc-001",
+                    "documentType": "projectDetails",
+                    "title": "ข้อมูลโครงการ",
+                    "description": "ข้อมูลโครงการจากเว็บไซต์ สคร.",
+                    "url": "https://ppp.sepo.go.th/content/172"
+                }
+            ]
+        },
+        {
+            "id": "ppp-004",
+            "title": "โครงการสัญญาเช่าสำหรับการบริหารและประกอบการท่าเทียบเรือตู้สินค้า บี 2",
+            "description": "โครงการสัญญาเช่าสำหรับการบริหารและประกอบการท่าเทียบเรือตู้สินค้า บี 2 - โครงการร่วมลงทุนระหว่างรัฐและเอกชน",
+            "status": "completed",
+            "type": "ท่าเรือ",
+            "purpose": "โครงการ(4) ท่าเรือ การขนส่งทางน้ำ",
+            "language": "th",
+            "updated": "2025-12-10T18:29:03.984752",
+            "period": {
+                "startDate": "1993-03-30",
+                "endDate": "2020-03-30"
+            },
+            "implementationPeriod": {
+                "startDate": "1993-03-30",
+                "endDate": "2020-03-30"
+            },
+            "sector": [
+                {
+                    "scheme": "TH-PPP",
+                    "id": "transport.water",
+                    "description": "(4) ท่าเรือ การขนส่งทางน้ำ"
+                }
+            ],
+            "publicAuthority": {
+                "id": "org-1",
+                "name": "การท่าเรือแห่งประเทศไทย (กทท.)"
+            },
+            "parties": [
+                {
+                    "id": "org-1",
+                    "name": "การท่าเรือแห่งประเทศไทย (กทท.)",
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-1",
+                        "legalName": "การท่าเรือแห่งประเทศไทย (กทท.)"
+                    },
+                    "roles": [
+                        "publicAuthority",
+                        "procuringEntity"
+                    ]
+                },
+                {
+                    "id": "org-2",
+                    "name": "บริษัท เอเวอร์กรีน คอนเทนเนอร์ เทอร์มินัล (ประเทศไทย) จำกัด",
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-2",
+                        "legalName": "บริษัท เอเวอร์กรีน คอนเทนเนอร์ เทอร์มินัล (ประเทศไทย) จำกัด"
+                    },
+                    "roles": [
+                        "privateParty",
+                        "contractor"
+                    ]
+                }
+            ],
+            "additionalClassifications": [
+                {
+                    "scheme": "TH-MINISTRY",
+                    "id": "กระทรวงคมนาคม",
+                    "description": "กระทรวงคมนาคม"
+                }
+            ],
+            "documents": [
+                {
+                    "id": "doc-001",
+                    "documentType": "projectDetails",
+                    "title": "ข้อมูลโครงการ",
+                    "description": "ข้อมูลโครงการจากเว็บไซต์ สคร.",
+                    "url": "https://ppp.sepo.go.th/content/171"
+                }
+            ]
+        },
+        {
+            "id": "ppp-005",
+            "title": "โครงการบริหารและประกอบการท่าเทียบเรือตู้สินค้า บี 4 ณ ท่าเรือแหลมฉบัง",
+            "description": "โครงการบริหารและประกอบการท่าเทียบเรือตู้สินค้า บี 4 ณ ท่าเรือแหลมฉบัง - โครงการร่วมลงทุนระหว่างรัฐและเอกชน",
+            "status": "completed",
+            "type": "ท่าเรือ",
+            "purpose": "โครงการ(4) ท่าเรือ การขนส่งทางน้ำ",
+            "language": "th",
+            "updated": "2025-12-10T18:29:03.983712",
+            "period": {
+                "startDate": "1994-01-01",
+                "endDate": "2021-01-01"
+            },
+            "implementationPeriod": {
+                "startDate": "1994-01-01",
+                "endDate": "2021-01-01"
+            },
+            "sector": [
+                {
+                    "scheme": "TH-PPP",
+                    "id": "transport.water",
+                    "description": "(4) ท่าเรือ การขนส่งทางน้ำ"
+                }
+            ],
+            "publicAuthority": {
+                "id": "org-1",
+                "name": "การท่าเรือแห่งประเทศไทย (กทท.)"
+            },
+            "parties": [
+                {
+                    "id": "org-1",
+                    "name": "การท่าเรือแห่งประเทศไทย (กทท.)",
+                    "roles": [
+                        "publicAuthority",
+                        "procuringEntity"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-1",
+                        "legalName": "การท่าเรือแห่งประเทศไทย (กทท.)"
+                    }
+                },
+                {
+                    "id": "org-2",
+                    "name": "บริษัท ที ไอ พี เอส จำกัด",
+                    "roles": [
+                        "privateParty",
+                        "contractor"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-2",
+                        "legalName": "บริษัท ที ไอ พี เอส จำกัด"
+                    }
+                }
+            ],
+            "additionalClassifications": [
+                {
+                    "scheme": "TH-MINISTRY",
+                    "id": "กระทรวงคมนาคม",
+                    "description": "กระทรวงคมนาคม"
+                }
+            ],
+            "documents": [
+                {
+                    "id": "doc-001",
+                    "documentType": "projectDetails",
+                    "title": "ข้อมูลโครงการ",
+                    "description": "ข้อมูลโครงการจากเว็บไซต์ สคร.",
+                    "url": "https://ppp.sepo.go.th/content/170"
+                }
+            ]
+        },
+        {
+            "id": "ppp-006",
+            "title": "โครงการบริหารและประกอบการท่าเทียบเรือตู้สินค้า บี 3 ณ ท่าเรือแหลมฉบัง",
+            "description": "โครงการบริหารและประกอบการท่าเทียบเรือตู้สินค้า บี 3 ณ ท่าเรือแหลมฉบัง - โครงการร่วมลงทุนระหว่างรัฐและเอกชน",
+            "status": "completed",
+            "type": "ท่าเรือ",
+            "purpose": "โครงการ(4) ท่าเรือ การขนส่งทางน้ำ",
+            "language": "th",
+            "updated": "2025-12-10T18:29:03.983766",
+            "period": {
+                "startDate": "1995-01-01",
+                "endDate": "2021-01-01"
+            },
+            "implementationPeriod": {
+                "startDate": "1995-01-01",
+                "endDate": "2021-01-01"
+            },
+            "sector": [
+                {
+                    "scheme": "TH-PPP",
+                    "id": "transport.water",
+                    "description": "(4) ท่าเรือ การขนส่งทางน้ำ"
+                }
+            ],
+            "publicAuthority": {
+                "id": "org-1",
+                "name": "การท่าเรือแห่งประเทศไทย (กทท.)"
+            },
+            "parties": [
+                {
+                    "id": "org-1",
+                    "name": "การท่าเรือแห่งประเทศไทย (กทท.)",
+                    "roles": [
+                        "publicAuthority",
+                        "procuringEntity"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-1",
+                        "legalName": "การท่าเรือแห่งประเทศไทย (กทท.)"
+                    }
+                },
+                {
+                    "id": "org-2",
+                    "name": "บริษัท อีสเทิร์นซี แหลมฉบัง เทอร์มินัล จำกัด",
+                    "roles": [
+                        "privateParty",
+                        "contractor"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-2",
+                        "legalName": "บริษัท อีสเทิร์นซี แหลมฉบัง เทอร์มินัล จำกัด"
+                    }
+                }
+            ],
+            "additionalClassifications": [
+                {
+                    "scheme": "TH-MINISTRY",
+                    "id": "กระทรวงคมนาคม",
+                    "description": "กระทรวงคมนาคม"
+                }
+            ],
+            "documents": [
+                {
+                    "id": "doc-001",
+                    "documentType": "projectDetails",
+                    "title": "ข้อมูลโครงการ",
+                    "description": "ข้อมูลโครงการจากเว็บไซต์ สคร.",
+                    "url": "https://ppp.sepo.go.th/content/169"
+                }
+            ]
+        },
+        {
+            "id": "ppp-007",
+            "title": "โครงการสัญญาเช่าสำหรับการบริหารและประกอบการท่าเทียบเรือตู้สินค้า บี 1",
+            "description": "โครงการสัญญาเช่าสำหรับการบริหารและประกอบการท่าเทียบเรือตู้สินค้า บี 1 - โครงการร่วมลงทุนระหว่างรัฐและเอกชน",
+            "status": "completed",
+            "type": "ท่าเรือ",
+            "purpose": "โครงการ(4) ท่าเรือ การขนส่งทางน้ำ",
+            "language": "th",
+            "updated": "2025-12-10T18:29:03.985065",
+            "period": {
+                "startDate": "1995-10-09",
+                "endDate": "2022-10-09"
+            },
+            "implementationPeriod": {
+                "startDate": "1995-10-09",
+                "endDate": "2022-10-09"
+            },
+            "sector": [
+                {
+                    "scheme": "TH-PPP",
+                    "id": "transport.water",
+                    "description": "(4) ท่าเรือ การขนส่งทางน้ำ"
+                }
+            ],
+            "publicAuthority": {
+                "id": "org-1",
+                "name": "การท่าเรือแห่งประเทศไทย (กทท.)"
+            },
+            "parties": [
+                {
+                    "id": "org-1",
+                    "name": "การท่าเรือแห่งประเทศไทย (กทท.)",
+                    "roles": [
+                        "publicAuthority",
+                        "procuringEntity"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-1",
+                        "legalName": "การท่าเรือแห่งประเทศไทย (กทท.)"
+                    }
+                },
+                {
+                    "id": "org-2",
+                    "name": "บริษัท แอลซีบี คอนเทนเนอร์ เทอร์มินัล 1 จำกัด",
+                    "roles": [
+                        "privateParty",
+                        "contractor"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-2",
+                        "legalName": "บริษัท แอลซีบี คอนเทนเนอร์ เทอร์มินัล 1 จำกัด"
+                    }
+                }
+            ],
+            "additionalClassifications": [
+                {
+                    "scheme": "TH-MINISTRY",
+                    "id": "กระทรวงคมนาคม",
+                    "description": "กระทรวงคมนาคม"
+                }
+            ],
+            "documents": [
+                {
+                    "id": "doc-001",
+                    "documentType": "projectDetails",
+                    "title": "ข้อมูลโครงการ",
+                    "description": "ข้อมูลโครงการจากเว็บไซต์ สคร.",
+                    "url": "https://ppp.sepo.go.th/content/168"
+                }
+            ]
+        },
+        {
+            "id": "ppp-008",
+            "title": "โครงการบริหารศูนย์ประชุมแห่งชาติสิริกิติ์",
+            "description": "โครงการบริหารศูนย์ประชุมแห่งชาติสิริกิติ์ - โครงการร่วมลงทุนระหว่างรัฐและเอกชน",
+            "status": "active",
+            "type": "ศูนย์นิทรรศการและศูนย์การประชุม",
+            "purpose": "โครงการ(11) ศูนย์นิทรรศการและศูนย์การประชุม",
+            "language": "th",
+            "updated": "2025-12-10T18:29:03.985037",
+            "period": {
+                "startDate": "1996-04-09",
+                "endDate": "2046-04-09"
+            },
+            "implementationPeriod": {
+                "startDate": "1996-04-09",
+                "endDate": "2046-04-09"
+            },
+            "sector": [
+                {
+                    "scheme": "TH-PPP",
+                    "id": "cultureSportsAndRecreation",
+                    "description": "(11) ศูนย์นิทรรศการและศูนย์การประชุม"
+                }
+            ],
+            "publicAuthority": {
+                "id": "org-1",
+                "name": "กรมธนารักษ์"
+            },
+            "parties": [
+                {
+                    "id": "org-1",
+                    "name": "กรมธนารักษ์",
+                    "roles": [
+                        "publicAuthority",
+                        "procuringEntity"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-1",
+                        "legalName": "กรมธนารักษ์"
+                    }
+                },
+                {
+                    "id": "org-2",
+                    "name": "บริษัท เอ็น ซี ซี แมนเนจเม้นท์แอนด์ ดีเวลลอปเม้นท์ จำกัด",
+                    "roles": [
+                        "privateParty",
+                        "contractor"
+                    ]
+                }
+            ],
+            "additionalClassifications": [
+                {
+                    "scheme": "TH-MINISTRY",
+                    "id": "กระทรวงการคลัง",
+                    "description": "กระทรวงการคลัง"
+                }
+            ],
+            "identifiers": [
+                {
+                    "scheme": "TH-PPP-TYPE",
+                    "id": "BTO",
+                    "legalName": "โครงการบริหารศูนย์ประชุมแห่งชาติสิริกิติ์"
+                }
+            ],
+            "documents": [
+                {
+                    "id": "doc-001",
+                    "documentType": "projectDetails",
+                    "title": "ข้อมูลโครงการ",
+                    "description": "ข้อมูลโครงการจากเว็บไซต์ สคร.",
+                    "url": "https://ppp.sepo.go.th/content/167"
+                }
+            ]
+        },
+        {
+            "id": "ppp-009",
+            "title": "โครงการสัญญาลงทุนก่อสร้าง บริหาร และประกอบการท่าเทียบเรือสินค้า บี 5 ณ ท่าเรือแหลมฉบัง",
+            "description": "โครงการสัญญาลงทุนก่อสร้าง บริหาร และประกอบการท่าเทียบเรือสินค้า บี 5 ณ ท่าเรือแหลมฉบัง - โครงการร่วมลงทุนระหว่างรัฐและเอกชน",
+            "status": "active",
+            "type": "ท่าเรือ",
+            "purpose": "โครงการ(4) ท่าเรือ การขนส่งทางน้ำ",
+            "language": "th",
+            "updated": "2025-12-10T18:29:03.984044",
+            "period": {
+                "startDate": "1996-04-11",
+                "endDate": "2026-04-11"
+            },
+            "implementationPeriod": {
+                "startDate": "1996-04-11",
+                "endDate": "2026-04-11"
+            },
+            "sector": [
+                {
+                    "scheme": "TH-PPP",
+                    "id": "transport.water",
+                    "description": "(4) ท่าเรือ การขนส่งทางน้ำ"
+                }
+            ],
+            "publicAuthority": {
+                "id": "org-1",
+                "name": "การท่าเรือแห่งประเทศไทย (กทท.)"
+            },
+            "parties": [
+                {
+                    "id": "org-1",
+                    "name": "การท่าเรือแห่งประเทศไทย (กทท.)",
+                    "roles": [
+                        "publicAuthority",
+                        "procuringEntity"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-1",
+                        "legalName": "การท่าเรือแห่งประเทศไทย (กทท.)"
+                    }
+                },
+                {
+                    "id": "org-2",
+                    "name": "บริษัท แหลมฉบัง อินเตอร์เนชั่นแนล เทอร์มินอล จำกัด (LCIT)",
+                    "roles": [
+                        "privateParty",
+                        "contractor"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-2",
+                        "legalName": "บริษัท แหลมฉบัง อินเตอร์เนชั่นแนล เทอร์มินอล จำกัด (LCIT)"
+                    }
+                }
+            ],
+            "additionalClassifications": [
+                {
+                    "scheme": "TH-MINISTRY",
+                    "id": "กระทรวงคมนาคม",
+                    "description": "กระทรวงคมนาคม"
+                }
+            ],
+            "identifiers": [
+                {
+                    "scheme": "TH-PPP-TYPE",
+                    "id": "BOT",
+                    "legalName": "โครงการสัญญาลงทุนก่อสร้าง บริหาร และประกอบการท่าเทียบเรือสินค้า บี 5 ณ ท่าเรือแหลมฉบัง"
+                }
+            ],
+            "documents": [
+                {
+                    "id": "doc-001",
+                    "documentType": "projectDetails",
+                    "title": "ข้อมูลโครงการ",
+                    "description": "ข้อมูลโครงการจากเว็บไซต์ สคร.",
+                    "url": "https://ppp.sepo.go.th/content/166"
+                }
+            ]
+        },
+        {
+            "id": "ppp-010",
+            "title": "โครงการสัญญาลงทุนก่อสร้าง บริหาร และประกอบการท่าเทียบเรือสินค้ากอง เอ 5 ณ ท่าเรือแหลมฉบัง",
+            "description": "โครงการสัญญาลงทุนก่อสร้าง บริหาร และประกอบการท่าเทียบเรือสินค้ากอง เอ 5 ณ ท่าเรือแหลมฉบัง - โครงการร่วมลงทุนระหว่างรัฐและเอกชน",
+            "status": "active",
+            "type": "ท่าเรือ",
+            "purpose": "โครงการ(4) ท่าเรือ การขนส่งทางน้ำ",
+            "language": "th",
+            "updated": "2025-12-10T18:29:03.984073",
+            "period": {
+                "startDate": "1996-04-11",
+                "endDate": "2026-04-11"
+            },
+            "implementationPeriod": {
+                "startDate": "1996-04-11",
+                "endDate": "2026-04-11"
+            },
+            "sector": [
+                {
+                    "scheme": "TH-PPP",
+                    "id": "transport.water",
+                    "description": "(4) ท่าเรือ การขนส่งทางน้ำ"
+                }
+            ],
+            "publicAuthority": {
+                "id": "org-1",
+                "name": "การท่าเรือแห่งประเทศไทย (กทท.)"
+            },
+            "parties": [
+                {
+                    "id": "org-1",
+                    "name": "การท่าเรือแห่งประเทศไทย (กทท.)",
+                    "roles": [
+                        "publicAuthority",
+                        "procuringEntity"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-1",
+                        "legalName": "การท่าเรือแห่งประเทศไทย (กทท.)"
+                    }
+                },
+                {
+                    "id": "org-2",
+                    "name": "บริษัท นามยง เทอร์มินัล จำกัด",
+                    "roles": [
+                        "privateParty",
+                        "contractor"
+                    ]
+                }
+            ],
+            "additionalClassifications": [
+                {
+                    "scheme": "TH-MINISTRY",
+                    "id": "กระทรวงคมนาคม",
+                    "description": "กระทรวงคมนาคม"
+                }
+            ],
+            "documents": [
+                {
+                    "id": "doc-001",
+                    "documentType": "projectDetails",
+                    "title": "ข้อมูลโครงการ",
+                    "description": "ข้อมูลโครงการจากเว็บไซต์ สคร.",
+                    "url": "https://ppp.sepo.go.th/content/165"
+                }
+            ]
+        },
+        {
+            "id": "ppp-011",
+            "title": "โครงการระบบส่งน้ำมันเชื้อเพลิง อากาศยานผ่านท่อแบบ Hydrant ณ ท่าอากาศยานสุวรรณภูมิ",
+            "description": "โครงการระบบส่งน้ำมันเชื้อเพลิง อากาศยานผ่านท่อแบบ Hydrant ณ ท่าอากาศยานสุวรรณภูมิ - โครงการร่วมลงทุนระหว่างรัฐและเอกชน",
+            "status": "active",
+            "type": "ท่าอากาศยาน",
+            "purpose": "โครงการ(3) ท่าอากาศยาน การขนส่งทางอากาศ",
+            "language": "th",
+            "updated": "2025-12-10T18:29:03.984264",
+            "period": {
+                "startDate": "1997-04-18",
+                "endDate": "2027-04-18"
+            },
+            "implementationPeriod": {
+                "startDate": "1997-04-18",
+                "endDate": "2027-04-18"
+            },
+            "sector": [
+                {
+                    "scheme": "TH-PPP",
+                    "id": "transport.air",
+                    "description": "(3) ท่าอากาศยาน การขนส่งทางอากาศ"
+                }
+            ],
+            "publicAuthority": {
+                "id": "org-1",
+                "name": "บริษัท ท่าอากาศยานไทย จำกัด (มหาชน) (ทอท.)"
+            },
+            "parties": [
+                {
+                    "id": "org-1",
+                    "name": "บริษัท ท่าอากาศยานไทย จำกัด (มหาชน) (ทอท.)",
+                    "roles": [
+                        "publicAuthority",
+                        "procuringEntity"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-1",
+                        "legalName": "บริษัท ท่าอากาศยานไทย จำกัด (มหาชน) (ทอท.)"
+                    }
+                },
+                {
+                    "id": "org-2",
+                    "name": "บริษัท ไทยเชื้อเพลิงการบิน จำกัด",
+                    "roles": [
+                        "privateParty",
+                        "contractor"
+                    ],
+                    "identifier": {
+                        "scheme": "TH-PPP",
+                        "id": "org-2",
+                        "legalName": "บริษัท ไทยเชื้อเพลิงการบิน จำกัด"
+                    }
+                }
+            ],
+            "additionalClassifications": [
+                {
+                    "scheme": "TH-MINISTRY",
+                    "id": "กระทรวงคมนาคม",
+                    "description": "กระทรวงคมนาคม"
+                }
+            ],
+            "identifiers": [
+                {
+                    "scheme": "TH-PPP-TYPE",
+                    "id": "BTO",
+                    "legalName": "โครงการระบบส่งน้ำมันเชื้อเพลิง อากาศยานผ่านท่อแบบ Hydrant ณ ท่าอากาศยานสุวรรณภูมิ"
+                }
+            ],
+            "documents": [
+                {
+                    "id": "doc-001",
+                    "documentType": "projectDetails",
+                    "title": "ข้อมูลโครงการ",
+                    "description": "ข้อมูลโครงการจากเว็บไซต์ สคร.",
+                    "url": "https://ppp.sepo.go.th/content/164"
+                }
+            ]
+        }
+    ]
+}
