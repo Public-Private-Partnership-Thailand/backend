@@ -2,7 +2,7 @@ from typing import List, Optional
 import uuid
 from sqlmodel import Session, select, func, or_
 from oc4ids_datastore_api.models import Project, Ministry, Agency, ProjectParty, PartyAdditionalIdentifier, Sector
-
+from sqlalchemy.dialects.postgresql import array_agg
 class ProjectDAO:
     def __init__(self, session: Session):
         self.session = session
@@ -145,10 +145,8 @@ func.array_agg(AdditionalClassification.description.distinct()).label("concessio
         return project
 
     def delete(self, project_id: str) -> None:
-        """Soft delete a project by setting deleted_at timestamp"""
         from datetime import datetime
         
-        # Verify project exists
         project = self.session.get(Project, project_id)
         
         if not project:
@@ -159,7 +157,6 @@ func.array_agg(AdditionalClassification.description.distinct()).label("concessio
         self.session.commit()
 
 class ReferenceDataDAO:
-    """DAO for fetching reference/lookup data"""
     def __init__(self, session: Session):
         self.session = session
     
@@ -172,13 +169,6 @@ class ReferenceDataDAO:
     def get_ministries(self) -> List[Ministry]:
         """Fetch all ministries"""
         return self.session.exec(select(Ministry)).all()
-    
-    def get_contract_types(self) -> List:
-        """Fetch contract types from additional_classifications"""
-        from oc4ids_datastore_api.models import AdditionalClassification
-        return self.session.exec(
-            select(AdditionalClassification).distinct()
-        ).all()
     
     def get_project_types(self):
         """Fetch all project types"""

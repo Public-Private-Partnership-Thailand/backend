@@ -1187,7 +1187,6 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
     # Fetch from database
     sectors = dao.get_sectors()
     ministries = dao.get_ministries()
-    contract_types = dao.get_contract_types()
     project_types = dao.get_project_types()
     concession_forms = dao.get_concession_forms()
     
@@ -1199,10 +1198,6 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
         "ministry": [
             {"id": m.id, "value": m.name_th}
             for m in ministries
-        ],
-        "contractType": [
-            {"id": ct.id, "value": ct.description or ct.code}
-            for ct in contract_types
         ],
         "projectType": [
             {"id": pt.id, "value": pt.name_th if pt.name_th else pt.code}
