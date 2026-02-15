@@ -1160,7 +1160,7 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
             for m in ministries
         ],
         "projectType": [
-            {"id": pt.id, "value": pt.code}
+            {"id": pt.id, "value": pt.name_th}
             for pt in project_types
         ],
         "concessionForm": [
