@@ -187,8 +187,8 @@ class ReferenceDataDAO:
             .distinct()
         ).all()
 
-    def get_contact_types(self) -> List:
-        """Fetch contact types from additional_classifications"""
+    def get_contract_types(self) -> List:
+        """Fetch contract types from additional_classifications"""
         from oc4ids_datastore_api.models import AdditionalClassification
         return self.session.exec(
             select(AdditionalClassification)
