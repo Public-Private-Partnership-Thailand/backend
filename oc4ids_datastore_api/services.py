@@ -717,18 +717,8 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
             stmt = select(Sector).where(Sector.code == s_data)
             sector_obj = session.exec(stmt).first()
             
-            #(FIX) In the future I will remove this part only allow existing sectors
             if not sector_obj:
-                sector_obj = Sector(
-                    code=s_data,
-                    name_th=s_data,  # ใช้ description เป็น name_th
-                    name_en=s_data,
-                    description=s_data,
-                    is_active=True,
-                    category=s_data
-                )
-                session.add(sector_obj)
-                session.flush()
+                raise ValueError(f"Sector with code '{s_data}' not found in database")
             
             db_project.sectors.append(sector_obj)
 
@@ -741,14 +731,7 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
             )
             ac_obj = session.exec(stmt).first()
             if not ac_obj:
-                ac_obj = AdditionalClassification(
-                    scheme=ac.get("scheme"),
-                    code=ac.get("id"),
-                    description=ac.get("description"),
-                    uri=ac.get("uri")
-                )
-                session.add(ac_obj)
-                session.flush()
+                raise ValueError(f"AdditionalClassification with scheme '{ac.get('scheme')}' and code '{ac.get('id')}' not found in database")
             
             db_project.additional_classifications.append(ac_obj)
 
