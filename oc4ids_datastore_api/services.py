@@ -547,6 +547,7 @@ def get_all_projects(
     sector_id: Optional[List[int]] = None,
     ministry_id: Optional[List[int]] = None,
     concession_form_id: Optional[List[int]] = None,
+    contract_type_id: Optional[List[int]] = None,
     year_from: Optional[int] = None,
     year_to: Optional[int] = None
 ) -> Dict[str, Any]:
@@ -560,6 +561,7 @@ def get_all_projects(
         sector_id=sector_id,
         ministry_id=ministry_id,
         concession_form_id=concession_form_id,
+        contract_type_id=contract_type_id,
         year_from=year_from,
         year_to=year_to
     )
@@ -1180,8 +1182,8 @@ def get_dashboard_summary(
 ) -> Dict[str, Any]:
     """Get dashboard summary statistics and latest projects matching filters"""
     dao = ProjectDAO(session)
-    projects = dao.get_summaries(
-        limit=10000,
+    # 1. Get Aggregated Stats (DB-side)
+    stats = dao.get_dashboard_stats(
         title=search,
         sector_id=sector_id,
         ministry_id=ministry_id,
@@ -1192,150 +1194,131 @@ def get_dashboard_summary(
         year_to=year_to
     )
     
-    total_projects = len(projects)
-    unique_contractors = set()
-    total_investment = 0
-    max_budget = 0  # Track maximum budget
-    ministry_counts = {}
-    ministry_investments = {}
-    
-    # Project Scales Buckets (THB Million)
-    # Small < 1,000M
-    # Medium 1,000M - 5,000M
-    # Big > 5,000M
-    project_scales = {
-        "small": {"count": 0, "investment": 0},
-        "medium": {"count": 0, "investment": 0},
-        "big": {"count": 0, "investment": 0}
-    }
-    
-    investment_by_year = {} # year -> total_amount
-    
-    # Sector Stats with Scale Breakdown
-    sector_stats = {} 
-    # Structure: sector_name -> { total: {}, small: {}, medium: {}, big: {} }
+    # 2. Get Latest Projects (Small limit)
+    latest_projects_results = dao.get_summaries(
+        limit=5, 
+        title=search,
+        sector_id=sector_id,
+        ministry_id=ministry_id,
+        agency_id=agency_id,
+        concession_form_id=concession_form_id,
+        contract_type_id=contract_type_id,
+        year_from=year_from,
+        year_to=year_to
+    )
+
+    # Map Latest Projects
     latest_projects_data = []
+    for p in latest_projects_results:
+         # Helper to extract ministry names
+         p_ministries = []
+         pm_names = getattr(p, "party_ministry_names", None)
+         if pm_names:
+            if isinstance(pm_names, list):
+                p_ministries.extend([m.strip() for m in pm_names if m.strip()])
+            elif isinstance(pm_names, str):
+                p_ministries.extend([m.strip() for m in pm_names.split(',') if m.strip()])
 
-    for idx, p in enumerate(projects):
-        # Budget
-        amt = getattr(p, "budget_amount", 0) or 0
-        total_investment += amt
-        if amt > max_budget:
-            max_budget = amt
-        
-        # Contractors
-        if getattr(p, "private_party_name", None):
-             for name in p.private_party_name.split(','):
-                  unique_contractors.add(name.strip())
+         am_names = getattr(p, "agency_ministry_names", None)
+         if am_names:
+            if isinstance(am_names, list):
+                p_ministries.extend([m.strip() for m in am_names if m.strip()])
+            elif isinstance(am_names, str):
+                p_ministries.extend([m.strip() for m in am_names.split(',') if m.strip()])
+         
+         p_ministries = list(set(p_ministries))
 
-        # Ministries Data
-        p_ministries = []
-        if getattr(p, "party_ministry_names", None):
-             p_ministries.extend([m.strip() for m in p.party_ministry_names.split(',') if m.strip()])
-        if getattr(p, "agency_ministry_names", None):
-             p_ministries.extend([m.strip() for m in p.agency_ministry_names.split(',') if m.strip()])
-        
-        p_ministries = list(set(p_ministries)) # Unique per project
-
-        for m_name in p_ministries:
-             ministry_counts[m_name] = ministry_counts.get(m_name, 0) + 1
-             ministry_investments[m_name] = ministry_investments.get(m_name, 0) + amt 
-        
-        # Determine Scale
-        scale_key = "small"
-        if amt > 5_000_000_000:
-            scale_key = "big"
-        elif amt > 1_000_000_000:
-            scale_key = "medium"
-        
-        # Update Overall Project Scales
-        project_scales[scale_key]["count"] += 1
-        project_scales[scale_key]["investment"] += amt
-
-        # Sectors Calculation
-        if getattr(p, "sector_names", None):
-            for s_name in p.sector_names.split(','):
-                s_name = s_name.strip()
-                if s_name not in sector_stats:
-                    sector_stats[s_name] = {
-                        "total": {"count": 0, "investment": 0},
-                        "small": {"count": 0, "investment": 0},
-                        "medium": {"count": 0, "investment": 0},
-                        "big": {"count": 0, "investment": 0}
-                    }
-                
-                # Update Total
-                sector_stats[s_name]["total"]["count"] += 1
-                sector_stats[s_name]["total"]["investment"] += amt
-                
-                # Update Specific Scale
-                sector_stats[s_name][scale_key]["count"] += 1
-                sector_stats[s_name][scale_key]["investment"] += amt
-
-        # Investment by Year
-        if hasattr(p, 'period_start_date') and p.period_start_date:
-            year = p.period_start_date.year
-            investment_by_year[year] = investment_by_year.get(year, 0) + amt
-
-        # Latest Projects (Top 5)
-        if idx < 5:
-             latest_projects_data.append({
-                 "id": str(p.id),
-                 "title": p.title,
-                 "ministry": p_ministries,
-                 "public_authority": p.agency_name,
-                 "budget": {"amount": {"amount": amt, "currency": "THB"}},
-                 "status": "implementation",  # Placeholder or map from p.status
-                 "type": "PPP", # Placeholder
-                 "updated": datetime.utcnow().isoformat()
-             })
+         latest_projects_data.append({
+             "id": str(p.id),
+             "title": p.title,
+             "ministry": p_ministries,
+             "public_authority": p.agency_name,
+             "budget": {"amount": getattr(p, "budget_amount", 0) or 0}, 
+             "status": "implementation",  
+             "type": "PPP", 
+             "updated": datetime.utcnow().isoformat()
+         })
+    
+    # Map stats to return structure
+    total_projects = stats["total_projects"]
+    total_investment = stats["total_investment"]
+    unique_contractors = stats["unique_contractors"]
+    ministry_counts = stats["ministry_counts"]
+    ministry_investments = stats["ministry_investments"]
+    max_budget = stats["max_budget"]
+    project_scales = stats["project_scales"]
+    sector_stats = stats["sector_stats"]
+    
 
     # Format Output Lists
     ministry_stats_list = [
         {"ministry": k, "projectCount": v, "totalInvestment": ministry_investments.get(k, 0), "rank": 0}
         for k, v in ministry_counts.items()
     ]
-    # Sort by project count
-    ministry_stats_list.sort(key=lambda x: x["projectCount"], reverse=True)
+    # Sort by project count, then total investment
+    ministry_stats_list.sort(key=lambda x: (x["projectCount"], x["totalInvestment"]), reverse=True)
     for i, item in enumerate(ministry_stats_list):
         item["rank"] = i + 1
 
+    # Limit to top 10 and aggregate others
+    top_ministries = ministry_stats_list[:10]
+    other_ministries_list = ministry_stats_list[10:]
+    other_project_count = sum(item["projectCount"] for item in other_ministries_list)
+    other_total_investment = sum(item["totalInvestment"] for item in other_ministries_list)
+
+    ministry_stats_list = top_ministries
+    other_ministries = {"projectCount": other_project_count, "totalInvestment": other_total_investment}
+
     ministry_investments_list = [
-        {"ministry": k, "totalInvestment": v}
+        {"ministry": k, "totalInvestment": v, "projectCount": ministry_counts.get(k, 0), "rank": 0}
         for k, v in ministry_investments.items()
     ]
-    ministry_investments_list.sort(key=lambda x: x["totalInvestment"], reverse=True)
+    ministry_investments_list.sort(key=lambda x: (x["totalInvestment"], x["projectCount"]), reverse=True)
+    for i, item in enumerate(ministry_investments_list):
+        item["rank"] = i + 1
 
-    business_group_stats = [
-        {
-            "groupName": k, 
+    # Limit to top 10 and aggregate others
+    top_ministries_invest = ministry_investments_list[:10]
+    other_ministries_invest_list = ministry_investments_list[10:]
+    other_invest_project_count = sum(item["projectCount"] for item in other_ministries_invest_list)
+    other_invest_total_investment = sum(item["totalInvestment"] for item in other_ministries_invest_list)
+
+    ministry_investments_list = top_ministries_invest
+    other_ministries_investment = {"totalInvestment": other_invest_total_investment, "projectCount": other_invest_project_count}
+
+    business_group_stats = []
+    for k, v in sector_stats.items():
+        business_group_stats.append({
+            "groupName": k,
+            "displayName": k,
             "total": v["total"],
             "small": v["small"],
             "medium": v["medium"],
             "big": v["big"]
-        }
-        for k, v in sector_stats.items()
-    ]
+        })
     
+    
+    investment_by_year_data = stats.get("investment_by_year", {})
     investment_by_year_list = [
-        {"year": k, "value": v} for k,v in sorted(investment_by_year.items())
+        {"year": k, "investment": v["investment"], "projectCount": v["count"]}
+        for k, v in investment_by_year_data.items()
     ]
+    investment_by_year_list.sort(key=lambda x: x["year"])
 
     return {
         "summary": {
             "totalProjects": total_projects,
-            "uniqueContractors": len(unique_contractors),
+            "uniqueContractors": unique_contractors,
             "totalInvestment": total_investment,
             "maxBudget": max_budget
         },
         "ministryStats": ministry_stats_list,
         "latestProjects": latest_projects_data,
-        "otherMinistries": {"projectCount": 0, "totalInvestment": 0}, # Can implement "Others" logic if list too long
+        "otherMinistries": other_ministries,
         "ministryInvestments": ministry_investments_list,
-        "otherMinistriesInvestment": {"totalInvestment": 0, "projectCount": 0},
+        "otherMinistriesInvestment": other_ministries_investment,
         "projectScales": project_scales,
         "investmentByYear": investment_by_year_list,
         "businessGroupStats": business_group_stats,
-        "sectorCounts": {k: v["total"]["count"] for k,v in sector_stats.items()},
-        "projectScope": {"domestic": {"count": total_projects, "investment": total_investment}, "international": {"count": 0, "investment": 0}}
+        "sectorCounts": {k: v["total"]["count"] for k,v in sector_stats.items()}
     }

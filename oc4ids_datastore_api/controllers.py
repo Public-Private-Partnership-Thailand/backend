@@ -44,6 +44,7 @@ def read_projects(
         sector_id=sector_id,
         ministry_id=ministry_id,
         concession_form_id=concession_form_id,
+        contract_type_id=contract_type_id,
         year_from=year_from,
         year_to=year_to
     )
