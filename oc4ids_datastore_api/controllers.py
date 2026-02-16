@@ -31,6 +31,7 @@ def read_projects(
     sector_id: Optional[List[int]] = Query(None),
     ministry_id: Optional[List[int]] = Query(None),
     concession_form_id: Optional[List[int]] = Query(None),
+    contract_type_id: Optional[List[int]] = Query(None),
     year_from: Optional[int] = None,
     year_to: Optional[int] = None,
     session: Session = Depends(get_session)

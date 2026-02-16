@@ -259,10 +259,18 @@ class ProjectDAO:
             return {
                 "total_projects": 0,
                 "total_investment": 0,
+                "max_budget": 0,
                 "unique_contractors": 0,
                 "ministry_counts": {},
                 "ministry_investments": {},
-                "project_ids": [] # Needed if we want to fetch latest list separately
+                "project_scales": {
+                    "big": {"count": 0, "investment": 0},
+                    "medium": {"count": 0, "investment": 0},
+                    "small": {"count": 0, "investment": 0},
+                },
+                "sector_stats": {},
+                "investment_by_year": {},
+                "project_ids": []
             }
 
         # 2.2 Total Investment & Max Budget (using ProjectBudget or logic used in get_projects?)
