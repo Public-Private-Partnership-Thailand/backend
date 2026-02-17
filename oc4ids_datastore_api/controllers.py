@@ -94,7 +94,14 @@ async def upload_file(file: UploadFile = File(...), session: Session = Depends(g
                         results.append(res)
                     except Exception as e:
                         results.append({"error": str(e), "project_title": p_data.get("title")})
-                return {"status": "success", "results": results}
+                has_errors = any("error" in r for r in results)
+                status = "partial_success" if has_errors else "success"
+                
+                # If everything failed, might want "error"
+                if has_errors and all("error" in r for r in results):
+                    status = "error"
+                    
+                return {"status": status, "results": results}
             
             # Helper for single project file
             return create_project_data(data, session)

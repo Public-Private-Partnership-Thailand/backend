@@ -735,11 +735,20 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
     # - Sectors
     if "sector" in project_data and isinstance(project_data["sector"], list):
         for s_data in project_data["sector"]:
-            stmt = select(Sector).where(Sector.code == s_data)
+            # Handle both string code and dict object
+            s_code = s_data.get("id") if isinstance(s_data, dict) else s_data
+            
+            if not s_code:
+                continue
+                
+            stmt = select(Sector).where(Sector.code == s_code)
             sector_obj = session.exec(stmt).first()
             
             if not sector_obj:
-                raise ValueError(f"Sector with code '{s_data}' not found in database")
+                # Instead of crashing, we log and skip or create a default?
+                # For now log and continue to be robust.
+                logger.warning(f"Sector with code '{s_code}' not found in database. Skipping.")
+                continue
             
             db_project.sectors.append(sector_obj)
 
