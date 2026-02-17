@@ -16,7 +16,8 @@ from oc4ids_datastore_api.services import (
     update_project_data,
     delete_project_data,
     get_reference_info,
-    get_dashboard_summary
+    get_dashboard_summary,
+    get_projects_comparison
 )
 
 router = APIRouter()
@@ -59,6 +60,11 @@ def read_project(project_id: str, session: Session = Depends(get_session)) -> Di
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return project
+    
+
+@router.get("/compare")
+def compare_projects(ids: List[str] = Query(..., alias="ids"), session: Session = Depends(get_session)) -> List[Dict[str, Any]]:
+    return get_projects_comparison(session, ids)
 
 
 # Create a new project

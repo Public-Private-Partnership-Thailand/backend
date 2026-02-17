@@ -609,6 +609,12 @@ def get_project_by_id(session: Session, project_id: str) -> Optional[Dict[str, A
         return None
     return project.to_oc4ids()
 
+def get_projects_comparison(session: Session, project_ids: List[str]) -> List[Dict[str, Any]]:
+    """Compare multiple projects by fetching their full details"""
+    dao = ProjectDAO(session)
+    projects = dao.get_by_ids(project_ids)
+    return [p.to_oc4ids() for p in projects]
+
 def add_metadata(project_data: Dict[str, Any]) -> Dict[str, Any]:
     """Wraps project data for validation"""
     return {

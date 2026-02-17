@@ -13,6 +13,10 @@ class ProjectDAO:
             return None
         return project
 
+    def get_by_ids(self, project_ids: List[str]) -> List[Project]:
+        statement = select(Project).where(Project.id.in_(project_ids)).where(Project.deleted_at.is_(None))
+        return self.session.exec(statement).all()
+
     #def get_all(self, skip: int = 0, limit: int = 100) -> List[Project]:
     #    return self.session.exec(select(Project).offset(skip).limit(limit)).all()
 
