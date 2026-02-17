@@ -78,15 +78,16 @@ class ProjectDAO:
             id_query = id_query.join(FilterLinkContract, Project.id == FilterLinkContract.project_id)
             id_query = id_query.where(FilterLinkContract.classification_id.in_(contract_type_id))
         
-        if year_from:
+        if year_from or year_to:
              id_query = id_query.join(FilterLastPeriod, (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == 'duration'))
-             id_query = id_query.where(func.extract('year', FilterLastPeriod.start_date) >= year_from)
-        
-        if year_to:
-             if not year_from:
-                 id_query = id_query.join(FilterLastPeriod, (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == 'duration'))
-             
-             id_query = id_query.where(func.extract('year', FilterLastPeriod.end_date) <= year_to)
+
+        if year_from and year_to:
+             id_query = id_query.where(func.extract('year', FilterLastPeriod.start_date) <= year_to)
+             id_query = id_query.where(func.extract('year', FilterLastPeriod.end_date) >= year_from)
+        elif year_from:
+             id_query = id_query.where(func.extract('year', FilterLastPeriod.end_date) >= year_from)
+        elif year_to:
+             id_query = id_query.where(func.extract('year', FilterLastPeriod.start_date) <= year_to)
 
         id_query = id_query.distinct().offset(skip).limit(limit)
         
@@ -237,15 +238,16 @@ class ProjectDAO:
             id_query = id_query.join(FilterLinkContract, Project.id == FilterLinkContract.project_id)
             id_query = id_query.where(FilterLinkContract.classification_id.in_(contract_type_id))
         
-        if year_from:
+        if year_from or year_to:
              id_query = id_query.join(FilterLastPeriod, (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == 'duration'))
-             id_query = id_query.where(func.extract('year', FilterLastPeriod.start_date) >= year_from)
-        
-        if year_to:
-             if not year_from:
-                 id_query = id_query.join(FilterLastPeriod, (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == 'duration'))
-             
-             id_query = id_query.where(func.extract('year', FilterLastPeriod.end_date) <= year_to)
+
+        if year_from and year_to:
+             id_query = id_query.where(func.extract('year', FilterLastPeriod.start_date) <= year_to)
+             id_query = id_query.where(func.extract('year', FilterLastPeriod.end_date) >= year_from)
+        elif year_from:
+             id_query = id_query.where(func.extract('year', FilterLastPeriod.end_date) >= year_from)
+        elif year_to:
+             id_query = id_query.where(func.extract('year', FilterLastPeriod.start_date) <= year_to)
 
         # Use CTE or subquery for filtered project IDs
         filtered_project_ids = id_query.distinct().subquery()
@@ -295,7 +297,7 @@ class ProjectDAO:
         
         # 2.3 Unique Contractors = Total count of agencies
         AgencyCountAlias = aliased(Agency)
-        contractor_query = select(func.count(AgencyCountAlias.id))
+        contractor_query = select(func.count(AgencyCountAlias.id)).where(AgencyCountAlias.ministry_id.is_(None))
         unique_contractors = self.session.exec(contractor_query).one()
 
         ProjectPartyAlias = aliased(ProjectParty)

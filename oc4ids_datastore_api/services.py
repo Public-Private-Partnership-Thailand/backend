@@ -691,7 +691,22 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
         pa_data = project_data["publicAuthority"]
         pa_name = pa_data.get("name")
         if pa_name:
-            agency = _get_or_create_ref(session, Agency, "name_th", pa_name, {"name_en": pa_name})
+            # Check if Ministry exists with this name
+            ministry_stmt = select(Ministry).where(Ministry.name_th == pa_name)
+            ministry = session.exec(ministry_stmt).first()
+            
+            agency_defaults = {"name_en": pa_name}
+            if ministry:
+                agency_defaults["ministry_id"] = ministry.id
+            
+            agency = _get_or_create_ref(session, Agency, "name_th", pa_name, agency_defaults)
+            
+            # Update ministry_id if it was found but not set on the agency
+            if ministry and agency.ministry_id != ministry.id:
+                 agency.ministry_id = ministry.id
+                 session.add(agency)
+                 session.flush()
+                 
             model_data["public_authority_id"] = agency.id
         else:
             raise HTTPException(status_code=400, detail="Public Authority exists but has no name.")
@@ -913,8 +928,22 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
     
         agency_id = None
         if legal_name:
-            #(FIX) I this case agency should create if not exist ministry and add id to ministry_id in agency table
-            agency_obj = _get_or_create_ref(session, Agency, "name_th", legal_name, {"name_en": legal_name})
+            # Check if Ministry exists with this name (as legal_name is the ministry name for agencies)
+            ministry_stmt = select(Ministry).where(Ministry.name_th == legal_name)
+            ministry = session.exec(ministry_stmt).first()
+            
+            agency_defaults = {"name_en": legal_name}
+            if ministry:
+                agency_defaults["ministry_id"] = ministry.id
+
+            agency_obj = _get_or_create_ref(session, Agency, "name_th", legal_name, agency_defaults)
+            
+            # Update ministry_id if it was found but not set on the agency
+            if ministry and agency_obj.ministry_id != ministry.id:
+                 agency_obj.ministry_id = ministry.id
+                 session.add(agency_obj)
+                 session.flush()
+
             agency_id = agency_obj.id
 
         p_obj = ProjectParty(
