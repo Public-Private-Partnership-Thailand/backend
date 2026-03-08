@@ -485,14 +485,28 @@ class ContractingProcessDocument(SQLModel, table=True):
 class ProjectRelatedProject(SQLModel, table=True):
     __tablename__ = "project_related_projects"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    project_id: uuid.UUID = Field(foreign_key="projects.id")
-    relationship_id: str
+    project_id: uuid.UUID = Field(foreign_key="projects.id")        # โปรเจคที่ "มี" ความสัมพันธ์นี้
+    related_project_id: Optional[uuid.UUID] = Field(               # โปรเจคปลายทาง (ถ้าอยู่ใน DB)
+        default=None, foreign_key="projects.id"
+    )
     scheme: Optional[str] = None
-    identifier: str
-    relationship: str
+    identifier: str                                                 # OC4IDS identifier string (เก็บไว้เสมอ)
+    relationship: str                                               # เช่น "construction", "related"
     title: Optional[str] = None
     uri: Optional[str] = None
-    project: "Project" = Relationship(back_populates="related_projects")
+    project: "Project" = Relationship(
+        back_populates="related_projects",
+        sa_relationship_kwargs={
+            "primaryjoin": "ProjectRelatedProject.project_id == Project.id",
+            "foreign_keys": "[ProjectRelatedProject.project_id]",
+        }
+    )
+    related_project: Optional["Project"] = Relationship(
+        sa_relationship_kwargs={
+            "primaryjoin": "ProjectRelatedProject.related_project_id == Project.id",
+            "foreign_keys": "[ProjectRelatedProject.related_project_id]",
+        }
+    )
 
 class ProjectCostMeasurement(SQLModel, table=True):
     __tablename__ = "project_cost_measurements"
@@ -796,6 +810,81 @@ class ProjectCompletion(SQLModel, table=True):
 
 
 # ===================================
+# RISK MANAGEMENT
+# ===================================
+
+class RiskCategory(SQLModel, table=True):
+    __tablename__ = "risk_category"
+    risk_category_id: Optional[int] = Field(default=None, primary_key=True)
+    category_code: Optional[str] = None
+    category_name: Optional[str] = None
+
+    # Relationships
+    risk_assignments: List["RiskCategoryAssignment"] = Relationship(back_populates="category")
+    factor_links: List["CategoryFactorLink"] = Relationship(back_populates="category")
+
+class RiskFactor(SQLModel, table=True):
+    __tablename__ = "risk_factor"
+    risk_factor_id: Optional[int] = Field(default=None, primary_key=True)
+    factor_name: Optional[str] = None
+
+    # Relationships
+    category_links: List["CategoryFactorLink"] = Relationship(back_populates="factor")
+
+class Risk(SQLModel, table=True):
+    __tablename__ = "risk"
+    risk_id: Optional[int] = Field(default=None, primary_key=True)
+    title: Optional[str] = None
+    phase: Optional[str] = None
+    project_id: uuid.UUID = Field(foreign_key="projects.id")
+
+    # Relationships
+    project: "Project" = Relationship(back_populates="risks")
+    mitigations: List["Mitigation"] = Relationship(back_populates="risk")
+    impacts: List["Impact"] = Relationship(back_populates="risk")
+    category_assignments: List["RiskCategoryAssignment"] = Relationship(back_populates="risk")
+
+class Mitigation(SQLModel, table=True):
+    __tablename__ = "mitigation"
+    mitigation_id: Optional[int] = Field(default=None, primary_key=True)
+    action: Optional[str] = None
+    status: Optional[str] = None
+    risk_id: int = Field(foreign_key="risk.risk_id")
+
+    # Relationships
+    risk: "Risk" = Relationship(back_populates="mitigations")
+
+class Impact(SQLModel, table=True):
+    __tablename__ = "impact"
+    impact_id: Optional[int] = Field(default=None, primary_key=True)
+    description: Optional[str] = None
+    risk_id: int = Field(foreign_key="risk.risk_id")
+
+    # Relationships
+    risk: "Risk" = Relationship(back_populates="impacts")
+
+# Junction table: Risk <-> RiskCategory (Many-to-Many)
+class RiskCategoryAssignment(SQLModel, table=True):
+    __tablename__ = "risk_category_assignment"
+    risk_id: int = Field(foreign_key="risk.risk_id", primary_key=True)
+    risk_category_id: int = Field(foreign_key="risk_category.risk_category_id", primary_key=True)
+
+    # Relationships
+    risk: "Risk" = Relationship(back_populates="category_assignments")
+    category: "RiskCategory" = Relationship(back_populates="risk_assignments")
+
+# Junction table: RiskCategory <-> RiskFactor (Many-to-Many)
+class CategoryFactorLink(SQLModel, table=True):
+    __tablename__ = "category_factor_link"
+    risk_category_id: int = Field(foreign_key="risk_category.risk_category_id", primary_key=True)
+    risk_factor_id: int = Field(foreign_key="risk_factor.risk_factor_id", primary_key=True)
+
+    # Relationships
+    category: "RiskCategory" = Relationship(back_populates="factor_links")
+    factor: "RiskFactor" = Relationship(back_populates="category_links")
+
+
+# ===================================
 # MAIN PROJECT MODEL
 # ===================================
 
@@ -829,7 +918,13 @@ class Project(SQLModel, table=True):
     budget: Optional["ProjectBudget"] = Relationship(back_populates="project")
     parties_list: List["ProjectParty"] = Relationship(back_populates="project")
     contracting_processes: List["ProjectContractingProcess"] = Relationship(back_populates="project")
-    related_projects: List["ProjectRelatedProject"] = Relationship(back_populates="project")
+    related_projects: List["ProjectRelatedProject"] = Relationship(
+        back_populates="project",
+        sa_relationship_kwargs={
+            "primaryjoin": "Project.id == ProjectRelatedProject.project_id",
+            "foreign_keys": "[ProjectRelatedProject.project_id]",
+        }
+    )
     
     # New Children
     cost_measurements: List["ProjectCostMeasurement"] = Relationship(back_populates="project")
@@ -843,6 +938,9 @@ class Project(SQLModel, table=True):
     lobbying_meetings: List["ProjectLobbyingMeeting"] = Relationship(back_populates="project")
     policy_alignment: Optional["ProjectPolicyAlignment"] = Relationship(back_populates="project")
     asset_lifetime: Optional["ProjectAssetLifetime"] = Relationship(back_populates="project")
+
+    # Risk Management
+    risks: List["Risk"] = Relationship(back_populates="project")
 
     # Many-to-Many
     sectors: List["Sector"] = Relationship(link_model=ProjectSectorLink)

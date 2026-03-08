@@ -891,12 +891,25 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
                 rel_str = rels[0]
             elif isinstance(rels, str):
                 rel_str = rels
-            
+
+            # identifier คือ OC4IDS id ของโปรเจคปลายทาง (เช่น "oc4ids-bu3kcz-...")
+            rp_identifier = rp.get("identifier")
+
+            # พยายาม resolve identifier → project_id จริงๆ ใน DB
+            resolved_project_id = None
+            if rp_identifier:
+                pi_stmt = select(ProjectIdentifier).where(
+                    ProjectIdentifier.identifier_value == rp_identifier
+                )
+                pi_obj = session.exec(pi_stmt).first()
+                if pi_obj:
+                    resolved_project_id = pi_obj.project_id
+
             rp_obj = ProjectRelatedProject(
                 project_id=db_project.id,
-                relationship_id=str(uuid.uuid4()),
+                related_project_id=resolved_project_id,  # UUID จริง (ถ้า resolve ได้)
                 scheme=rp.get("scheme"),
-                identifier=rp.get("id"),
+                identifier=rp_identifier or rp.get("id", ""),  # เก็บ identifier string ไว้เสมอ
                 relationship=rel_str,
                 title=rp.get("title"),
                 uri=rp.get("uri")

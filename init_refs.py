@@ -7,6 +7,7 @@ from oc4ids_datastore_api.models import Sector, Ministry, ProjectType, Additiona
 
 DATA = {
     "sector": [
+        {"id": 0, "value": "transport"},        # Parent sector
         {"id": 1, "value": "transport.road"},
         {"id": 2, "value": "transport.rail"},
         {"id": 3, "value": "transport.air"},
@@ -19,6 +20,18 @@ DATA = {
         {"id": 10, "value": "socialHousing"},
         {"id": 11, "value": "cultureSportsAndRecreation"},
         {"id": 12, "value": "others"}
+    ],
+    "cofog": [
+        {"code": "04.5",   "description": "Transport"},
+        {"code": "04.5.1", "description": "Road transport (CS)"},
+        {"code": "04.5.2", "description": "Water transport (CS)"},
+        {"code": "04.5.3", "description": "Railway transport (CS)"},
+        {"code": "04.5.4", "description": "Air transport (CS)"},
+        {"code": "04.5.5", "description": "Pipeline and other transport (CS)"},
+        {"code": "04.6",   "description": "Communication"},
+        {"code": "06.0",   "description": "Housing and community amenities"},
+        {"code": "07.0",   "description": "Health"},
+        {"code": "09.0",   "description": "Education"},
     ],
     "ministry": [
         {"id": 1, "value": "กระทรวงกลาโหม"},
@@ -154,6 +167,23 @@ def init_concession_forms(session):
         else:
             print(f"Concession Form exists: {val}")
 
+def init_cofog(session):
+    print("Initializing COFOG Classifications...")
+    scheme = "COFOG"
+    for item in DATA["cofog"]:
+        code = item["code"]
+        desc = item["description"]
+        obj = session.exec(select(AdditionalClassification).where(
+            AdditionalClassification.scheme == scheme,
+            AdditionalClassification.code == code
+        )).first()
+        if not obj:
+            obj = AdditionalClassification(scheme=scheme, code=code, description=desc)
+            session.add(obj)
+            print(f"Created COFOG: {code} - {desc}")
+        else:
+            print(f"COFOG exists: {code}")
+
 from sqlalchemy import text # Import text
 
 # ... (data definitions remain same)
@@ -184,6 +214,7 @@ def main():
             init_contract_types(session)
             init_project_types(session)
             init_concession_forms(session)
+            init_cofog(session)
             session.commit()
             print("All reference data initialized successfully.")
         except Exception as e:
