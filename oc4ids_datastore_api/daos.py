@@ -514,5 +514,17 @@ class ReferenceDataDAO:
             .where(AdditionalClassification.scheme == "รูปแบบการจัดสรรกรรมสิทธิ์")
             .distinct()
         ).all()
-    
 
+    def get_risk_categories(self) -> List:
+        """Fetch all risk categories"""
+        from oc4ids_datastore_api.models import RiskCategory
+        return self.session.exec(
+            select(RiskCategory).order_by(RiskCategory.risk_category_id)
+        ).all()
+
+    def get_risk_factors(self) -> List:
+        """Fetch all risk factors"""
+        from oc4ids_datastore_api.models import RiskFactor
+        return self.session.exec(
+            select(RiskFactor).order_by(RiskFactor.risk_factor_id)
+        ).all()

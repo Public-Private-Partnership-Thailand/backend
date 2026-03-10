@@ -1186,6 +1186,8 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
     project_types = dao.get_project_types()
     concession_forms = dao.get_concession_forms()
     contract_types = dao.get_contract_types()
+    risk_categories = dao.get_risk_categories()
+    risk_factors = dao.get_risk_factors()
     
     return {
         "sector": [
@@ -1207,7 +1209,15 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
         "contractType": [
             {"id": ct.id, "value": ct.description or ct.code}
             for ct in contract_types
-        ]
+        ],
+        "riskCategory": [
+            {"id": rc.risk_category_id, "code": rc.category_code, "value": rc.category_name}
+            for rc in risk_categories
+        ],
+        "riskFactor": [
+            {"id": rf.risk_factor_id, "value": rf.factor_name}
+            for rf in risk_factors
+        ],
     }
 
 def get_dashboard_summary(
