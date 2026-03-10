@@ -30,6 +30,7 @@ import uuid
 import logging
 from fastapi import HTTPException
 from libcoveoc4ids.api import oc4ids_json_output
+from oc4ids_datastore_api.utils import format_thai_amount
 
 logger = logging.getLogger(__name__)
 
@@ -1349,8 +1350,8 @@ def get_dashboard_summary(
         "summary": {
             "totalProjects": total_projects,
             "uniqueContractors": unique_contractors,
-            "totalInvestment": total_investment,
-            "maxBudget": max_budget
+            "totalInvestment": format_thai_amount(total_investment),
+            "maxBudget": format_thai_amount(max_budget)
         },
         "ministryStats": ministry_stats_list,
         "latestProjects": latest_projects_data,
