@@ -1289,6 +1289,7 @@ def get_dashboard_summary(
     max_budget = stats["max_budget"]
     project_scales = stats["project_scales"]
     sector_stats = stats["sector_stats"]
+    inprogress_projects = stats["inprogress_projects"]
     
 
     # Format Output Lists
@@ -1351,7 +1352,8 @@ def get_dashboard_summary(
             "totalProjects": total_projects,
             "uniqueContractors": unique_contractors,
             "totalInvestment": format_thai_amount(total_investment),
-            "maxBudget": format_thai_amount(max_budget)
+            "maxBudget": format_thai_amount(max_budget),
+            "inprogressProjects": inprogress_projects
         },
         "ministryStats": ministry_stats_list,
         "latestProjects": latest_projects_data,

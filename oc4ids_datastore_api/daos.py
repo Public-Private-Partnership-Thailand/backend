@@ -267,6 +267,7 @@ class ProjectDAO:
                 "total_investment": 0,
                 "max_budget": 0,
                 "unique_contractors": 0,
+                "inprogress_projects": 0,
                 "ministry_counts": {},
                 "ministry_investments": {},
                 "project_scales": {
@@ -419,6 +420,22 @@ class ProjectDAO:
                  "big": {"count": big_count, "investment": big_inv}
              }
 
+        # 2.6.5 In-Progress Projects (end_date >= today)
+        from datetime import date as date_cls
+        today = date_cls.today()
+        ProjectPeriodInProgress = aliased(ProjectPeriod)
+        inprogress_query = (
+            select(func.count(func.distinct(Project.id)))
+            .join(ProjectPeriodInProgress,
+                  (Project.id == ProjectPeriodInProgress.project_id) &
+                  (ProjectPeriodInProgress.period_type == 'duration'))
+            .where(
+                Project.id.in_(select(filtered_project_ids.c.id)),
+                ProjectPeriodInProgress.end_date >= today
+            )
+        )
+        inprogress_projects = self.session.exec(inprogress_query).one() or 0
+
         # 2.7 Investment by Year
         # Group by start_date year
         ProjectPeriodAlias = aliased(ProjectPeriod)
@@ -452,12 +469,13 @@ class ProjectDAO:
             "total_investment": total_investment,
             "max_budget": max_budget,
             "unique_contractors": unique_contractors,
+            "inprogress_projects": inprogress_projects,
             "ministry_counts": ministry_counts,
             "ministry_investments": ministry_investments,
             "project_scales": project_scales,
             "sector_stats": sector_stats,
             "investment_by_year": investment_by_year,
-            "project_ids": [row for row in self.session.exec(select(filtered_project_ids)).all()] 
+            "project_ids": [row for row in self.session.exec(select(filtered_project_ids)).all()]
         }
 
 class ReferenceDataDAO:
