@@ -1211,11 +1211,21 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
             for ct in contract_types
         ],
         "riskCategory": [
-            {"id": rc.risk_category_id, "code": rc.category_code, "value": rc.category_name}
+            {
+                "id": rc.risk_category_id,
+                "code": rc.category_code,
+                "value": rc.category_name,
+                "description_en": rc.description_en,
+                "description_th": rc.description_th,
+            }
             for rc in risk_categories
         ],
         "riskFactor": [
-            {"id": rf.risk_factor_id, "value": rf.factor_name}
+            {
+                "id": rf.risk_factor_id,
+                "value": rf.factor_name,
+                "description_th": rf.description_th,
+            }
             for rf in risk_factors
         ],
     }

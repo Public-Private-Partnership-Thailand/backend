@@ -816,8 +816,10 @@ class ProjectCompletion(SQLModel, table=True):
 class RiskCategory(SQLModel, table=True):
     __tablename__ = "risk_category"
     risk_category_id: Optional[int] = Field(default=None, primary_key=True)
-    category_code: Optional[str] = None
+    category_code: Optional[str] = Field(default=None, unique=True)
     category_name: Optional[str] = None
+    description_en: Optional[str] = None
+    description_th: Optional[str] = None
 
     # Relationships
     risk_assignments: List["RiskCategoryAssignment"] = Relationship(back_populates="category")
@@ -826,7 +828,8 @@ class RiskCategory(SQLModel, table=True):
 class RiskFactor(SQLModel, table=True):
     __tablename__ = "risk_factor"
     risk_factor_id: Optional[int] = Field(default=None, primary_key=True)
-    factor_name: Optional[str] = None
+    factor_name: Optional[str] = Field(default=None, unique=True)
+    description_th: Optional[str] = None
 
     # Relationships
     category_links: List["CategoryFactorLink"] = Relationship(back_populates="factor")

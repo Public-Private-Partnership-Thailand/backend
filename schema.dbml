@@ -1,0 +1,758 @@
+Table project_type {
+  id integer [pk]
+  scheme varchar
+  code varchar [not null]
+  name_th varchar
+  name_en varchar
+  description varchar
+}
+
+Table ministry {
+  id integer [pk]
+  name_th varchar [not null]
+  name_en varchar
+  created_at DATETIME
+  updated_at DATETIME
+}
+
+Table agency {
+  id integer [pk]
+  name_th varchar [not null]
+  name_en varchar
+  ministry_id integer
+  created_at DATETIME
+  updated_at DATETIME
+}
+
+Table period_types {
+  code varchar [pk]
+  name_en varchar [not null]
+  name_th varchar
+  description varchar
+  sequence integer
+  is_active boolean [not null]
+}
+
+Table sector {
+  id integer [pk]
+  code varchar [unique, not null]
+  parent_id integer
+  name_th varchar [not null]
+  name_en varchar
+  category varchar [not null]
+  description varchar
+  is_active boolean [not null]
+  created_at DATETIME
+  updated_at DATETIME
+}
+
+Table currencies {
+  code varchar [pk]
+  name varchar [not null]
+  symbol varchar
+  is_active boolean [not null]
+}
+
+Table additional_classifications {
+  id integer [pk]
+  scheme varchar [not null]
+  code varchar [not null]
+  description varchar
+  uri varchar
+}
+
+Table project_sector {
+  project_id CHAR [pk]
+  sector_id integer [pk]
+}
+
+Table project_additional_classifications {
+  project_id CHAR [pk]
+  classification_id integer [pk]
+}
+
+Table project_identifiers {
+  id integer [pk]
+  project_id CHAR [not null]
+  identifier_value varchar [not null]
+  scheme varchar
+}
+
+Table project_periods {
+  id integer [pk]
+  project_id CHAR [not null]
+  period_type varchar [not null]
+  start_date DATE
+  end_date DATE
+  max_extent_date DATE
+  duration_days integer
+}
+
+Table project_locations {
+  id CHAR [pk]
+  project_id CHAR [not null]
+  description varchar
+  uri varchar
+  geometry_type varchar
+  geometry_coordinates JSONB
+  street_address varchar
+  locality varchar
+  region varchar
+  postal_code varchar
+  country_name varchar
+}
+
+Table project_documents {
+  id integer [pk]
+  project_id CHAR [not null]
+  local_id varchar [not null]
+  document_type varchar
+  title varchar
+  description varchar
+  url varchar
+  date_published DATE
+  date_modified DATE
+  format varchar
+  language varchar
+  page_start varchar
+  page_end varchar
+  access_details varchar
+  author varchar
+}
+
+Table project_budgets {
+  id integer [pk]
+  project_id CHAR [not null]
+  description varchar
+  total_amount FLOAT
+  currency varchar
+  request_date DATE
+  approval_date DATE
+}
+
+Table budget_breakdowns {
+  id integer [pk]
+  budget_id integer [not null]
+  local_id varchar [not null]
+  description varchar
+}
+
+Table budget_breakdown_items {
+  id integer [pk]
+  breakdown_id integer [not null]
+  local_id varchar [not null]
+  description varchar
+  amount FLOAT
+  currency varchar
+  uri varchar
+  period_start_date DATE
+  period_end_date DATE
+  period_max_extent_date DATE
+  period_duration_days integer
+  source_party_id varchar
+  source_party_name varchar
+}
+
+Table project_finance {
+  id integer [pk]
+  budget_id integer [not null]
+  local_id varchar [not null]
+  asset_class varchar
+  type varchar
+  concessional boolean
+  value_amount FLOAT
+  value_currency varchar
+  source varchar
+  financing_party_id varchar
+  financing_party_name varchar
+  period_start_date DATE
+  period_end_date DATE
+  payment_period_start_date DATE
+  payment_period_end_date DATE
+  interest_rate_margin FLOAT
+  description varchar
+}
+
+Table project_parties {
+  id integer [pk]
+  project_id CHAR [not null]
+  local_id varchar [not null]
+  name varchar
+  identifier_scheme varchar
+  identifier_value varchar
+  identifier_legal_name_id integer
+  identifier_uri varchar
+  street_address varchar
+  locality varchar
+  region varchar
+  postal_code varchar
+  country_name varchar
+  contact_name varchar
+  contact_email varchar
+  contact_telephone varchar
+  contact_fax varchar
+  contact_url varchar
+}
+
+Table party_additional_identifiers {
+  id integer [pk]
+  party_id integer [not null]
+  scheme varchar
+  identifier varchar
+  legal_name_id integer
+  uri varchar
+}
+
+Table party_roles {
+  party_id integer [pk]
+  role varchar [pk]
+}
+
+Table party_people {
+  id integer [pk]
+  party_id integer [not null]
+  local_id varchar [not null]
+  name varchar
+  job_title varchar
+}
+
+Table party_beneficial_owners {
+  id integer [pk]
+  party_id integer [not null]
+  local_id varchar [not null]
+  name varchar
+  email varchar
+  telephone varchar
+  fax_number varchar
+  identifier_scheme varchar
+  identifier_value varchar
+  street_address varchar
+  locality varchar
+  region varchar
+  postal_code varchar
+  country_name varchar
+}
+
+Table beneficial_owner_nationalities {
+  owner_id integer [pk]
+  nationality varchar [pk]
+}
+
+Table party_classifications {
+  party_id integer [pk]
+  scheme varchar [pk]
+  classification_id varchar [pk]
+}
+
+Table project_contracting_processes {
+  id integer [pk]
+  project_id CHAR [not null]
+  local_id varchar [not null]
+  ocid varchar
+  external_reference varchar
+  title varchar
+  description varchar
+  status varchar
+  nature JSONB
+  contract_amount FLOAT
+  contract_currency varchar
+  final_amount FLOAT
+  final_currency varchar
+  period_start_date DATE
+  period_end_date DATE
+  period_max_extent_date DATE
+  period_duration_days integer
+}
+
+Table contracting_milestones {
+  id integer [pk]
+  process_id integer [not null]
+  local_id varchar [not null]
+  title varchar
+  type varchar
+  description varchar
+  code varchar
+  due_date DATE
+  date_met DATE
+  date_modified DATE
+  status varchar
+  value_amount FLOAT
+  value_currency varchar
+}
+
+Table contracting_tenders {
+  process_id integer [pk]
+  procurement_method varchar
+  procurement_method_details varchar
+  date_published DATE
+  cost_estimate_amount FLOAT
+  cost_estimate_currency varchar
+  number_of_tenderers integer
+}
+
+Table contracting_tender_tenderers {
+  id integer [pk]
+  process_id integer [not null]
+  local_id varchar [not null]
+  name varchar
+}
+
+Table contracting_tender_entities {
+  id integer [pk]
+  process_id integer [not null]
+  role varchar
+  name varchar
+}
+
+Table contracting_tender_sustainability {
+  id integer [pk]
+  process_id integer [not null]
+  strategies JSONB
+}
+
+Table contracting_suppliers {
+  id integer [pk]
+  process_id integer [not null]
+  local_id varchar [not null]
+  name varchar
+}
+
+Table contracting_social {
+  process_id integer [pk]
+  labor_budget_amount FLOAT
+  labor_budget_currency varchar
+  labor_obligations JSONB
+  labor_description varchar
+}
+
+Table contracting_releases {
+  id integer [pk]
+  process_id integer [not null]
+  local_id varchar [not null]
+  tag JSONB
+  date DATE
+  url varchar
+}
+
+Table contracting_transactions {
+  id integer [pk]
+  process_id integer [not null]
+  local_id varchar [not null]
+  source varchar
+  date DATE
+  amount FLOAT
+  currency varchar
+  payer_name varchar
+  payee_name varchar
+  uri varchar
+}
+
+Table contracting_modifications {
+  id integer [pk]
+  process_id integer [not null]
+  local_id varchar [not null]
+  date DATE
+  description varchar
+  rationale varchar
+  type varchar
+  release_id varchar
+  old_amount FLOAT
+  old_currency varchar
+  new_amount FLOAT
+  new_currency varchar
+  old_start_date DATE
+  old_end_date DATE
+  new_start_date DATE
+  new_end_date DATE
+}
+
+Table contracting_documents {
+  id integer [pk]
+  process_id integer [not null]
+  local_id varchar [not null]
+  document_type varchar
+  title varchar
+  description varchar
+  url varchar
+  date_published DATE
+  date_modified DATE
+  format varchar
+  language varchar
+  page_start varchar
+  page_end varchar
+  access_details varchar
+  author varchar
+}
+
+Table project_related_projects {
+  id CHAR [pk]
+  project_id CHAR [not null]
+  related_project_id CHAR
+  scheme varchar
+  identifier varchar [not null]
+  relationship varchar [not null]
+  title varchar
+  uri varchar
+}
+
+Table project_cost_measurements {
+  id integer [pk]
+  project_id CHAR [not null]
+  local_id varchar [not null]
+  measurement_date DATE
+  lifecycle_cost_amount FLOAT
+  lifecycle_cost_currency varchar
+}
+
+Table cost_groups {
+  id integer [pk]
+  cost_measurement_id integer [not null]
+  local_id varchar [not null]
+  category varchar
+}
+
+Table cost_items {
+  id integer [pk]
+  cost_group_id integer [not null]
+  local_id varchar [not null]
+  amount FLOAT
+  currency varchar
+  classification_id varchar
+  classification_scheme varchar
+  classification_description varchar
+}
+
+Table project_forecasts {
+  id integer [pk]
+  project_id CHAR [not null]
+  local_id varchar [not null]
+  title varchar
+  description varchar
+}
+
+Table forecast_observations {
+  id integer [pk]
+  forecast_id integer [not null]
+  local_id varchar [not null]
+  measure varchar
+  notes varchar
+  value_amount FLOAT
+  value_currency varchar
+  period_start_date DATE
+  period_end_date DATE
+  period_max_extent_date DATE
+  period_duration_days integer
+  unit_name varchar
+  unit_scheme varchar
+  unit_id varchar
+  unit_uri varchar
+  dimensions JSONB
+}
+
+Table project_metrics {
+  id integer [pk]
+  project_id CHAR [not null]
+  local_id varchar [not null]
+  title varchar
+  description varchar
+}
+
+Table metric_observations {
+  id integer [pk]
+  metric_id integer [not null]
+  local_id varchar [not null]
+  measure varchar
+  notes varchar
+  value_amount FLOAT
+  value_currency varchar
+  period_start_date DATE
+  period_end_date DATE
+  period_max_extent_date DATE
+  period_duration_days integer
+  unit_name varchar
+  unit_scheme varchar
+  unit_id varchar
+  unit_uri varchar
+  dimensions JSONB
+}
+
+Table location_gazetteers {
+  id integer [pk]
+  location_id CHAR [not null]
+  scheme varchar [not null]
+}
+
+Table location_gazetteer_identifiers {
+  id integer [pk]
+  gazetteer_id integer [not null]
+  identifier varchar [not null]
+}
+
+Table project_lobbying_meetings {
+  id integer [pk]
+  project_id CHAR [not null]
+  local_id varchar [not null]
+  meeting_date DATE
+  number_of_participants integer
+  street_address varchar
+  locality varchar
+  region varchar
+  postal_code varchar
+  country_name varchar
+  public_office_job_title varchar
+  public_office_person_name varchar
+  public_office_org_id varchar
+  public_office_org_name varchar
+}
+
+Table project_policy_alignment {
+  project_id CHAR [pk]
+  description varchar
+}
+
+Table project_policy_alignment_policies {
+  project_id CHAR [pk]
+  policy varchar [pk]
+}
+
+Table project_asset_lifetime {
+  project_id CHAR [pk]
+  period_start_date DATE
+  period_end_date DATE
+  period_max_extent_date DATE
+  period_duration_days integer
+}
+
+Table project_social {
+  project_id CHAR [pk]
+  in_indigenous_land boolean
+  land_compensation_amount FLOAT
+  land_compensation_currency varchar
+  health_safety_material_test_description varchar
+}
+
+Table social_consultation_meetings {
+  id integer [pk]
+  project_id CHAR [not null]
+  local_id varchar [not null]
+  date DATE
+  number_of_participants integer
+  street_address varchar
+  locality varchar
+  region varchar
+  postal_code varchar
+  country_name varchar
+  person_name varchar
+  organization_name varchar
+  organization_id varchar
+  job_title varchar
+}
+
+Table social_health_safety_material_tests {
+  project_id CHAR [pk]
+  test varchar [pk]
+}
+
+Table project_environment {
+  project_id CHAR [pk]
+  has_impact_assessment boolean
+  in_protected_area boolean
+  abatement_cost_amount FLOAT
+  abatement_cost_currency varchar
+}
+
+Table environment_goals {
+  project_id CHAR [pk]
+  goal varchar [pk]
+}
+
+Table environment_climate_oversight_types {
+  project_id CHAR [pk]
+  oversight_type varchar [pk]
+}
+
+Table environment_conservation_measures {
+  id integer [pk]
+  project_id CHAR [not null]
+  type varchar
+  description varchar
+}
+
+Table environment_environmental_measures {
+  id integer [pk]
+  project_id CHAR [not null]
+  type varchar
+  description varchar
+}
+
+Table environment_climate_measures {
+  id integer [pk]
+  project_id CHAR [not null]
+  type varchar
+  description varchar
+}
+
+Table environment_impact_categories {
+  id integer [pk]
+  project_id CHAR [not null]
+  scheme varchar
+  category_id varchar
+}
+
+Table project_benefits {
+  id integer [pk]
+  project_id CHAR [not null]
+  title varchar
+  description varchar
+}
+
+Table benefit_beneficiaries {
+  id integer [pk]
+  benefit_id integer [not null]
+  description varchar
+  number_of_people integer
+  location_id CHAR
+}
+
+Table project_completion {
+  project_id CHAR [pk]
+  end_date DATE
+  end_date_details varchar
+  final_scope varchar
+  final_scope_details varchar
+  final_value_amount FLOAT
+  final_value_currency varchar
+}
+
+Table risk_category {
+  risk_category_id integer [pk]
+  category_code varchar [unique]
+  category_name varchar
+  description_en varchar
+  description_th varchar
+}
+
+Table risk_factor {
+  risk_factor_id integer [pk]
+  factor_name varchar [unique]
+  description_th varchar
+}
+
+Table risk {
+  risk_id integer [pk]
+  title varchar
+  phase varchar
+  project_id CHAR [not null]
+}
+
+Table mitigation {
+  mitigation_id integer [pk]
+  action varchar
+  status varchar
+  risk_id integer [not null]
+}
+
+Table impact {
+  impact_id integer [pk]
+  description varchar
+  risk_id integer [not null]
+}
+
+Table risk_category_assignment {
+  risk_id integer [pk]
+  risk_category_id integer [pk]
+}
+
+Table category_factor_link {
+  risk_category_id integer [pk]
+  risk_factor_id integer [pk]
+}
+
+Table projects {
+  id CHAR [pk]
+  title varchar [not null]
+  description varchar
+  status varchar
+  purpose varchar
+  project_type_id integer
+  public_authority_id integer
+  created_at DATETIME [not null]
+  created_by CHAR
+  updated_at DATETIME [not null]
+  updated_by CHAR
+  deleted_at DATETIME
+}
+
+Ref: agency.ministry_id > ministry.id
+Ref: sector.parent_id > sector.id
+Ref: project_sector.sector_id > sector.id
+Ref: project_sector.project_id > projects.id
+Ref: project_additional_classifications.classification_id > additional_classifications.id
+Ref: project_additional_classifications.project_id > projects.id
+Ref: project_identifiers.project_id > projects.id
+Ref: project_periods.period_type > period_types.code
+Ref: project_periods.project_id > projects.id
+Ref: project_locations.project_id > projects.id
+Ref: project_documents.project_id > projects.id
+Ref: project_budgets.project_id > projects.id
+Ref: budget_breakdowns.budget_id > project_budgets.id
+Ref: budget_breakdown_items.breakdown_id > budget_breakdowns.id
+Ref: project_finance.budget_id > project_budgets.id
+Ref: project_parties.identifier_legal_name_id > agency.id
+Ref: project_parties.project_id > projects.id
+Ref: party_additional_identifiers.legal_name_id > ministry.id
+Ref: party_additional_identifiers.party_id > project_parties.id
+Ref: party_roles.party_id > project_parties.id
+Ref: party_people.party_id > project_parties.id
+Ref: party_beneficial_owners.party_id > project_parties.id
+Ref: beneficial_owner_nationalities.owner_id > party_beneficial_owners.id
+Ref: party_classifications.party_id > project_parties.id
+Ref: project_contracting_processes.project_id > projects.id
+Ref: contracting_milestones.process_id > project_contracting_processes.id
+Ref: contracting_tenders.process_id > project_contracting_processes.id
+Ref: contracting_tender_tenderers.process_id > contracting_tenders.process_id
+Ref: contracting_tender_entities.process_id > contracting_tenders.process_id
+Ref: contracting_tender_sustainability.process_id > contracting_tenders.process_id
+Ref: contracting_suppliers.process_id > project_contracting_processes.id
+Ref: contracting_social.process_id > project_contracting_processes.id
+Ref: contracting_releases.process_id > project_contracting_processes.id
+Ref: contracting_transactions.process_id > project_contracting_processes.id
+Ref: contracting_modifications.process_id > project_contracting_processes.id
+Ref: contracting_documents.process_id > project_contracting_processes.id
+Ref: project_related_projects.project_id > projects.id
+Ref: project_related_projects.related_project_id > projects.id
+Ref: project_cost_measurements.project_id > projects.id
+Ref: cost_groups.cost_measurement_id > project_cost_measurements.id
+Ref: cost_items.cost_group_id > cost_groups.id
+Ref: project_forecasts.project_id > projects.id
+Ref: forecast_observations.forecast_id > project_forecasts.id
+Ref: project_metrics.project_id > projects.id
+Ref: metric_observations.metric_id > project_metrics.id
+Ref: location_gazetteers.location_id > project_locations.id
+Ref: location_gazetteer_identifiers.gazetteer_id > location_gazetteers.id
+Ref: project_lobbying_meetings.project_id > projects.id
+Ref: project_policy_alignment.project_id > projects.id
+Ref: project_policy_alignment_policies.project_id > project_policy_alignment.project_id
+Ref: project_asset_lifetime.project_id > projects.id
+Ref: project_social.project_id > projects.id
+Ref: social_consultation_meetings.project_id > project_social.project_id
+Ref: social_health_safety_material_tests.project_id > project_social.project_id
+Ref: project_environment.project_id > projects.id
+Ref: environment_goals.project_id > project_environment.project_id
+Ref: environment_climate_oversight_types.project_id > project_environment.project_id
+Ref: environment_conservation_measures.project_id > project_environment.project_id
+Ref: environment_environmental_measures.project_id > project_environment.project_id
+Ref: environment_climate_measures.project_id > project_environment.project_id
+Ref: environment_impact_categories.project_id > project_environment.project_id
+Ref: project_benefits.project_id > projects.id
+Ref: benefit_beneficiaries.benefit_id > project_benefits.id
+Ref: project_completion.project_id > projects.id
+Ref: risk.project_id > projects.id
+Ref: mitigation.risk_id > risk.risk_id
+Ref: impact.risk_id > risk.risk_id
+Ref: risk_category_assignment.risk_id > risk.risk_id
+Ref: risk_category_assignment.risk_category_id > risk_category.risk_category_id
+Ref: category_factor_link.risk_category_id > risk_category.risk_category_id
+Ref: category_factor_link.risk_factor_id > risk_factor.risk_factor_id
+Ref: projects.public_authority_id > agency.id
+Ref: projects.project_type_id > project_type.id
