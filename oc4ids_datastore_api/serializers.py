@@ -191,7 +191,12 @@ def project_to_oc4ids(project) -> Dict[str, Any]:
             "endDate": project.asset_lifetime.period_end_date.isoformat() if project.asset_lifetime.period_end_date else None,
             "maxExtentDate": project.asset_lifetime.period_max_extent_date.isoformat() if project.asset_lifetime.period_max_extent_date else None,
             "durationInDays": project.asset_lifetime.period_duration_days
-        } if project.asset_lifetime else None
+        } if project.asset_lifetime else None,
+
+        # Risks
+        "risks": [
+            _serialize_risk(r) for r in project.risks
+        ]
 
     }
     
@@ -221,6 +226,52 @@ def project_to_oc4ids(project) -> Dict[str, Any]:
             result[field_name] = period_data
             
     return result
+
+
+def _serialize_risk(risk) -> Dict[str, Any]:
+    """Serialize a Risk to the project risk format"""
+    # For each category assigned to this risk, find which of the risk's factors
+    # also belong to that category (via CategoryFactorLink)
+    category_drivers = []
+    for ca in risk.category_assignments:
+        cat = ca.category
+        # Get the factor_ids that are canonically linked to this category
+        cat_factor_ids = {cfl.risk_factor_id for cfl in cat.factor_links}
+        # Intersect with the factors actually assigned to this risk
+        factors_for_cat = [
+            fa.factor
+            for fa in risk.factor_assignments
+            if fa.risk_factor_id in cat_factor_ids
+        ]
+        category_drivers.append({
+            "risk_category_id": cat.category_code,
+            "risk_category_code": cat.category_code,
+            "category_name": cat.category_name,
+            "driven_by_risk_factors": [
+                {
+                    "risk_factor_id": f.risk_factor_id,
+                    "factor_name": f.factor_name
+                }
+                for f in factors_for_cat
+            ]
+        })
+
+    return {
+        "risk_id": risk.risk_id,
+        "title": risk.title,
+        "phase": risk.phase,
+        "category_drivers": category_drivers,
+        "mitigation_handling": [
+            {
+                "action": mit.action,
+                "status": mit.status
+            }
+            for mit in risk.mitigations
+        ],
+        "impact_statement": [
+            imp.description for imp in risk.impacts
+        ]
+    }
 
 
 def _serialize_party(p) -> Dict[str, Any]:

@@ -47,6 +47,7 @@ class PeriodType(SQLModel, table=True):
 class Sector(SQLModel, table=True):
     __tablename__ = "sector"
     id: Optional[int] = Field(default=None, primary_key=True)
+    id_from_bit_mask: Optional[int] = Field(default=None, unique=True)
     code: str = Field(unique=True)
     parent_id: Optional[int] = Field(default=None, foreign_key="sector.id")
     name_th: str
@@ -824,6 +825,7 @@ class RiskCategory(SQLModel, table=True):
     # Relationships
     risk_assignments: List["RiskCategoryAssignment"] = Relationship(back_populates="category")
     factor_links: List["CategoryFactorLink"] = Relationship(back_populates="category")
+    patterns: List["RiskPattern"] = Relationship(back_populates="category")
 
 class RiskFactor(SQLModel, table=True):
     __tablename__ = "risk_factor"
@@ -834,6 +836,7 @@ class RiskFactor(SQLModel, table=True):
     # Relationships
     category_links: List["CategoryFactorLink"] = Relationship(back_populates="factor")
     risk_assignments: List["RiskFactorAssignment"] = Relationship(back_populates="factor")
+    patterns: List["RiskPattern"] = Relationship(back_populates="factor")
 
 class Risk(SQLModel, table=True):
     __tablename__ = "risk"
@@ -897,6 +900,32 @@ class RiskFactorAssignment(SQLModel, table=True):
     # Relationships
     risk: "Risk" = Relationship(back_populates="factor_assignments")
     factor: "RiskFactor" = Relationship(back_populates="risk_assignments")
+
+class RiskSource(SQLModel, table=True):
+    __tablename__ = "risk_source"
+    rs_id: Optional[int] = Field(default=None, primary_key=True)
+    rs_id_from_bit_mask: Optional[int] = None
+    meaning: Optional[str] = None
+    country: Optional[str] = None
+
+class RiskPhase(SQLModel, table=True):
+    __tablename__ = "risk_phase"
+    phase_id: Optional[int] = Field(default=None, primary_key=True)
+    phase_id_from_bit_mask: Optional[int] = None
+    phase_name: Optional[str] = None
+    meaning: Optional[str] = None
+
+class RiskPattern(SQLModel, table=True):
+    __tablename__ = "risk_pattern"
+    pattern_id: Optional[int] = Field(default=None, primary_key=True)
+    risk_category_id: int = Field(foreign_key="risk_category.risk_category_id")
+    risk_factor_id: int = Field(foreign_key="risk_factor.risk_factor_id")
+    phase: int
+    source: int
+
+    # Relationships
+    category: "RiskCategory" = Relationship(back_populates="patterns")
+    factor: "RiskFactor" = Relationship(back_populates="patterns")
 
 
 # ===================================

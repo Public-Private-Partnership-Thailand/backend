@@ -18,7 +18,8 @@ from oc4ids_datastore_api.models import (
     ProjectFinance, PartyRole, PartyPerson, PartyBeneficialOwner, BeneficialOwnerNationality, PartyClassification,
     ContractingTender, ContractingTenderTenderer, ContractingTenderEntity, ContractingTenderSustainability, 
     ContractingSupplier, ContractingSocial, ContractingRelease, LocationGazetteer, LocationGazetteerIdentifier,
-    ProjectPolicyAlignment, ProjectPolicyAlignmentPolicy, ProjectAssetLifetime
+    ProjectPolicyAlignment, ProjectPolicyAlignmentPolicy, ProjectAssetLifetime,
+    Risk, Mitigation, Impact, RiskCategory, RiskFactor, RiskCategoryAssignment, RiskFactorAssignment
 )
 from oc4ids_datastore_api.daos import ProjectDAO, ReferenceDataDAO
 from oc4ids_datastore_api.utils import format_thai_amount
@@ -540,6 +541,118 @@ def _create_asset_lifetime(session: Session, project_id: uuid.UUID, lifetime_dat
     ))
 
 
+def _create_risks(session: Session, project_id: uuid.UUID, risks_list: List[Dict]):
+    """Creates Risk records and all related assignments from the input risk list.
+
+    Expected input shape per risk item:
+    {
+      "risk_id": "GL-R-001",           # → Risk.local_id
+      "title": "...",                  # → Risk.title
+      "phase": "pre-construction",     # → Risk.phase
+      "description": ["...", "..."],   # → Impact records (each item = 1 row)
+      "category_drivers": [
+        {
+          "risk_category_id": "C020",      # looked up via RiskCategory.category_code
+          "risk_category_code": "PROCUREMENT",
+          "driven_by_risk_factors": [
+            {"risk_factor_id": "F0131", "factor_name": "Uncompetitive tender"}
+          ]
+        }
+      ],
+      "mitigation_handling": [
+        {"action": "...", "status": "done_or_selected"}
+      ],
+      "impact_statement": ["...", "..."]
+    }
+    """
+    
+    for r_data in risks_list:
+        risk_obj = Risk(
+            project_id=project_id,
+            title=r_data.get("title"),
+            phase=r_data.get("phase"),
+        )
+        session.add(risk_obj)
+        session.flush() 
+
+        for cd in r_data.get("category_drivers", []):
+            cat_code = cd.get("risk_category_id") or cd.get("risk_category_code")
+            rc_obj = None
+            if cat_code:
+                stmt = select(RiskCategory).where(RiskCategory.category_code == cat_code)
+                rc_obj = session.exec(stmt).first()
+                # Fallback: try matching by category_code field with the other key
+                if not rc_obj:
+                    alt_code = cd.get("risk_category_code") or cd.get("risk_category_id")
+                    if alt_code and alt_code != cat_code:
+                        stmt2 = select(RiskCategory).where(RiskCategory.category_code == alt_code)
+                        rc_obj = session.exec(stmt2).first()
+
+            if rc_obj:
+                # Create RiskCategoryAssignment (avoid duplicates)
+                existing_rca = session.exec(
+                    select(RiskCategoryAssignment).where(
+                        RiskCategoryAssignment.risk_id == risk_obj.risk_id,
+                        RiskCategoryAssignment.risk_category_id == rc_obj.risk_category_id
+                    )
+                ).first()
+                if not existing_rca:
+                    session.add(RiskCategoryAssignment(
+                        risk_id=risk_obj.risk_id,
+                        risk_category_id=rc_obj.risk_category_id
+                    ))
+            else:
+                logger.warning(f"RiskCategory with code '{cat_code}' not found. Skipping category assignment.")
+
+            # --- Factor assignments within this category driver ---
+            for rf_data in cd.get("driven_by_risk_factors", []):
+                factor_name = rf_data.get("factor_name")
+                rf_obj = None
+                if factor_name:
+                    stmt = select(RiskFactor).where(RiskFactor.factor_name == factor_name)
+                    rf_obj = session.exec(stmt).first()
+
+                if rf_obj:
+                    # Create RiskFactorAssignment (avoid duplicates)
+                    existing_rfa = session.exec(
+                        select(RiskFactorAssignment).where(
+                            RiskFactorAssignment.risk_id == risk_obj.risk_id,
+                            RiskFactorAssignment.risk_factor_id == rf_obj.risk_factor_id
+                        )
+                    ).first()
+                    if not existing_rfa:
+                        session.add(RiskFactorAssignment(
+                            risk_id=risk_obj.risk_id,
+                            risk_factor_id=rf_obj.risk_factor_id
+                        ))
+                else:
+                    logger.warning(f"RiskFactor '{factor_name}' not found. Skipping factor assignment.")
+
+        # --- Mitigations ---
+        for mit in r_data.get("mitigation_handling", []):
+            session.add(Mitigation(
+                risk_id=risk_obj.risk_id,
+                action=mit.get("action"),
+                status=mit.get("status")
+            ))
+
+        # --- description → Impact (อธิบายว่า risk เกิดจากอะไร) ---
+        desc_raw = r_data.get("description", [])
+        if isinstance(desc_raw, list):
+            for desc_text in desc_raw:
+                session.add(Impact(risk_id=risk_obj.risk_id, description=str(desc_text)))
+        elif desc_raw:
+            session.add(Impact(risk_id=risk_obj.risk_id, description=str(desc_raw)))
+
+        # --- impact_statement → Impact (ผลกระทบที่เกิดขึ้น) ---
+        impact_raw = r_data.get("impact_statement", [])
+        if isinstance(impact_raw, list):
+            for impact_text in impact_raw:
+                session.add(Impact(risk_id=risk_obj.risk_id, description=str(impact_text)))
+        elif impact_raw:
+            session.add(Impact(risk_id=risk_obj.risk_id, description=str(impact_raw)))
+
+
 def get_all_projects(
     session: Session, 
     page: int = 1, 
@@ -951,6 +1064,10 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
         
     if "assetLifetime" in project_data:
         _create_asset_lifetime(session, db_project.id, project_data["assetLifetime"])
+
+    # - Risks
+    if "risks" in project_data and isinstance(project_data["risks"], list):
+        _create_risks(session, db_project.id, project_data["risks"])
     #(end of REVIEW)
 
 
