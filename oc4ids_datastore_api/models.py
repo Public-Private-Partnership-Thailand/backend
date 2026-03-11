@@ -833,6 +833,7 @@ class RiskFactor(SQLModel, table=True):
 
     # Relationships
     category_links: List["CategoryFactorLink"] = Relationship(back_populates="factor")
+    risk_assignments: List["RiskFactorAssignment"] = Relationship(back_populates="factor")
 
 class Risk(SQLModel, table=True):
     __tablename__ = "risk"
@@ -846,6 +847,7 @@ class Risk(SQLModel, table=True):
     mitigations: List["Mitigation"] = Relationship(back_populates="risk")
     impacts: List["Impact"] = Relationship(back_populates="risk")
     category_assignments: List["RiskCategoryAssignment"] = Relationship(back_populates="risk")
+    factor_assignments: List["RiskFactorAssignment"] = Relationship(back_populates="risk")
 
 class Mitigation(SQLModel, table=True):
     __tablename__ = "mitigation"
@@ -885,6 +887,16 @@ class CategoryFactorLink(SQLModel, table=True):
     # Relationships
     category: "RiskCategory" = Relationship(back_populates="factor_links")
     factor: "RiskFactor" = Relationship(back_populates="category_links")
+
+# Junction table: Risk <-> RiskFactor (Many-to-Many)
+class RiskFactorAssignment(SQLModel, table=True):
+    __tablename__ = "risk_factor_assignment"
+    risk_id: int = Field(foreign_key="risk.risk_id", primary_key=True)
+    risk_factor_id: int = Field(foreign_key="risk_factor.risk_factor_id", primary_key=True)
+
+    # Relationships
+    risk: "Risk" = Relationship(back_populates="factor_assignments")
+    factor: "RiskFactor" = Relationship(back_populates="risk_assignments")
 
 
 # ===================================

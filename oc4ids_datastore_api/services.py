@@ -549,6 +549,8 @@ def get_all_projects(
     ministry_id: Optional[List[int]] = None,
     concession_form_id: Optional[List[int]] = None,
     contract_type_id: Optional[List[int]] = None,
+    risk_category_id: Optional[List[int]] = None,
+    risk_factor_id: Optional[List[int]] = None,
     year_from: Optional[int] = None,
     year_to: Optional[int] = None
 ) -> Dict[str, Any]:
@@ -563,6 +565,8 @@ def get_all_projects(
         ministry_id=ministry_id,
         concession_form_id=concession_form_id,
         contract_type_id=contract_type_id,
+        risk_category_id=risk_category_id,
+        risk_factor_id=risk_factor_id,
         year_from=year_from,
         year_to=year_to
     )

@@ -30,11 +30,14 @@ class ProjectDAO:
         agency_id: Optional[List[int]] = None,
         concession_form_id: Optional[List[int]] = None,
         contract_type_id: Optional[List[int]] = None,
+        risk_category_id: Optional[List[int]] = None,
+        risk_factor_id: Optional[List[int]] = None,
         year_from: Optional[int] = None,
         year_to: Optional[int] = None
     ):
         from sqlalchemy.orm import aliased
         from oc4ids_datastore_api.models import ProjectSectorLink, ProjectPeriod, ProjectAdditionalClassificationLink, ProjectBudget, AdditionalClassification
+        from oc4ids_datastore_api.models import Risk, RiskCategoryAssignment, RiskFactorAssignment
         
         # Aliases for filtering
         FilterLastPeriod = aliased(ProjectPeriod)
@@ -81,6 +84,24 @@ class ProjectDAO:
             FilterLinkContract = aliased(ProjectAdditionalClassificationLink)
             id_query = id_query.join(FilterLinkContract, Project.id == FilterLinkContract.project_id)
             id_query = id_query.where(FilterLinkContract.classification_id.in_(contract_type_id))
+            
+        if risk_category_id:
+            FilterRiskForCat = aliased(Risk)
+            FilterRiskCatAssign = aliased(RiskCategoryAssignment)
+            id_query = id_query.join(FilterRiskForCat, Project.id == FilterRiskForCat.project_id)
+            id_query = id_query.join(FilterRiskCatAssign, FilterRiskForCat.risk_id == FilterRiskCatAssign.risk_id)
+            id_query = id_query.where(FilterRiskCatAssign.risk_category_id.in_(risk_category_id))
+            
+        if risk_factor_id:
+            FilterRiskForFactor = aliased(Risk)
+            FilterRiskFactorAssign = aliased(RiskFactorAssignment)
+            # prevent duplicate join if both category and factor are used
+            if not risk_category_id:
+                id_query = id_query.join(FilterRiskForFactor, Project.id == FilterRiskForFactor.project_id)
+            else:
+                FilterRiskForFactor = FilterRiskForCat
+            id_query = id_query.join(FilterRiskFactorAssign, FilterRiskForFactor.risk_id == FilterRiskFactorAssign.risk_id)
+            id_query = id_query.where(FilterRiskFactorAssign.risk_factor_id.in_(risk_factor_id))
         
         if year_from or year_to:
              id_query = id_query.join(FilterLastPeriod, (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == 'duration'))

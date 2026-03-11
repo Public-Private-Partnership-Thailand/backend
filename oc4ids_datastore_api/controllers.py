@@ -33,6 +33,8 @@ def read_projects(
     ministry_id: Optional[List[int]] = Query(None),
     concession_form_id: Optional[List[int]] = Query(None),
     contract_type_id: Optional[List[int]] = Query(None),
+    risk_category_id: Optional[List[int]] = Query(None),
+    risk_factor_id: Optional[List[int]] = Query(None),
     year_from: Optional[int] = None,
     year_to: Optional[int] = None,
     session: Session = Depends(get_session)
@@ -47,6 +49,8 @@ def read_projects(
         ministry_id=ministry_id,
         concession_form_id=concession_form_id,
         contract_type_id=contract_type_id,
+        risk_category_id=risk_category_id,
+        risk_factor_id=risk_factor_id,
         year_from=year_from,
         year_to=year_to
     )
