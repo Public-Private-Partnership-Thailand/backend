@@ -304,6 +304,19 @@ class ProjectDAO:
         total_projects = self.session.exec(select(func.count()).select_from(filtered_project_ids)).one()
         
         if total_projects == 0:
+            from oc4ids_datastore_api.models import Sector
+            all_active_sectors_query = select(Sector.name_en).where(Sector.is_active == True)
+            all_active_sectors = self.session.exec(all_active_sectors_query).all()
+            
+            empty_sector_stats = {}
+            for s_name in all_active_sectors:
+                empty_sector_stats[s_name] = {
+                    "total": {"count": 0, "investment": 0},
+                    "small": {"count": 0, "investment": 0},
+                    "medium": {"count": 0, "investment": 0},
+                    "big": {"count": 0, "investment": 0}
+                }
+                
             return {
                 "total_projects": 0,
                 "total_investment": 0,
@@ -317,7 +330,7 @@ class ProjectDAO:
                     "medium": {"count": 0, "investment": 0},
                     "small": {"count": 0, "investment": 0},
                 },
-                "sector_stats": {},
+                "sector_stats": empty_sector_stats,
                 "investment_by_year": {},
                 "project_ids": []
             }
@@ -438,6 +451,19 @@ class ProjectDAO:
              .where(Project.id.in_(select(filtered_project_ids.c.id)))
              .group_by(SectorAlias.id, SectorAlias.name_en)
         )
+        
+        # Start with all active sectors
+        from oc4ids_datastore_api.models import Sector
+        all_active_sectors_query = select(Sector.name_en).where(Sector.is_active == True)
+        all_active_sectors = self.session.exec(all_active_sectors_query).all()
+        
+        for s_name in all_active_sectors:
+            sector_stats[s_name] = {
+                "total": {"count": 0, "investment": 0},
+                "small": {"count": 0, "investment": 0},
+                "medium": {"count": 0, "investment": 0},
+                "big": {"count": 0, "investment": 0}
+            }
         
         sector_results = self.session.exec(sector_query).all()
         
