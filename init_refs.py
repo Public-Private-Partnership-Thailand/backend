@@ -277,6 +277,35 @@ CATEGORY_FACTOR_LINKS = [
     (20, 131), (20, 13), (20, 75), (20, 120), (20, 124), (20, 130), (20, 132), (20, 78),
 ]
 
+RISK_PHASES = [
+    (1, 1, "pre-construction", "identification to preparation phases"),
+    (2, 2, "construction", "implementation and completion phases"),
+    (3, 4, "operation", "maintenance and decommissioning phases")
+]
+
+def init_risk_phases():
+    print("Initializing Risk Phases...")
+    inserted = updated = 0
+    with engine.begin() as conn:
+        for phase_id, phase_id_from_bit_mask, phase_name, meaning in RISK_PHASES:
+            row = conn.execute(
+                text("""
+                    INSERT INTO risk_phase (phase_id, phase_id_from_bit_mask, phase_name, meaning)
+                    VALUES (:phase_id, :phase_id_from_bit_mask, :phase_name, :meaning)
+                    ON CONFLICT (phase_id) DO UPDATE
+                        SET phase_id_from_bit_mask = EXCLUDED.phase_id_from_bit_mask,
+                            phase_name = EXCLUDED.phase_name,
+                            meaning = EXCLUDED.meaning
+                    RETURNING phase_id, (xmax = 0) AS ins
+                """),
+                {"phase_id": phase_id, "phase_id_from_bit_mask": phase_id_from_bit_mask, "phase_name": phase_name, "meaning": meaning},
+            ).fetchone()
+            if row[1]:
+                inserted += 1
+            else:
+                updated += 1
+    print(f"  Risk Phases done — Inserted: {inserted}, Updated: {updated}")
+
 
 def init_risk_categories():
     print("Initializing Risk Categories...")
@@ -373,6 +402,7 @@ def main():
         init_risk_categories()
         init_risk_factors()
         init_category_factor_links()
+        init_risk_phases()
         print("All risk seed data initialized successfully.")
     except Exception as e:
         print(f"An error occurred during risk seeding: {e}")

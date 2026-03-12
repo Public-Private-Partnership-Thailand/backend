@@ -1510,5 +1510,6 @@ def get_dashboard_summary(
         "projectScales": project_scales,
         "investmentByYear": investment_by_year_list,
         "businessGroupStats": business_group_stats,
-        "sectorCounts": {k: v["total"]["count"] for k,v in sector_stats.items()}
+        "sectorCounts": {k: v["total"]["count"] for k,v in sector_stats.items()},
+        "heatmapRisk": stats.get("heatmapRisk", [])
     }

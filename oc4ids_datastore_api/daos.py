@@ -298,6 +298,49 @@ class ProjectDAO:
         # Use CTE or subquery for filtered project IDs
         filtered_project_ids = id_query.distinct().subquery()
         
+        # Generate Heatmap base structure
+        from oc4ids_datastore_api.models import RiskCategory, RiskPhase, RiskPattern
+        all_categories = self.session.exec(select(RiskCategory)).order_by(RiskCategory.risk_category_id).all()
+        all_phases = self.session.exec(select(RiskPhase)).order_by(RiskPhase.phase_id).all()
+        all_patterns = self.session.exec(select(RiskPattern)).all()
+        
+        # Build structure: cat_id -> phase_name -> list of valid factors (using Bit Mask)
+        cat_phase_factors = {}
+        for cat in all_categories:
+            cat_id = cat.risk_category_id
+            cat_phase_factors[cat_id] = {p.phase_name: set() for p in all_phases}
+            
+        for pattern in all_patterns:
+            cat_id = pattern.risk_category_id
+            factor_id = pattern.risk_factor_id
+            p_bitmask = pattern.phase or 0
+            
+            if cat_id in cat_phase_factors:
+                for phase in all_phases:
+                    if phase.phase_id_from_bit_mask and (p_bitmask & phase.phase_id_from_bit_mask) != 0:
+                        cat_phase_factors[cat_id][phase.phase_name].add(factor_id)
+        
+        base_heatmap_risk = []
+        for cat in all_categories:
+            cat_id = cat.risk_category_id
+            phase_list = []
+            
+            for phase in all_phases:
+                 phase_name = phase.phase_name
+                 # Only take the factors valid for this phase
+                 valid_factors = sorted(list(cat_phase_factors[cat_id].get(phase_name, [])))
+                 risk_factors_list = [{"id": f_id, "value": 0} for f_id in valid_factors]
+                 
+                 phase_list.append({
+                     "phase": phase_name,
+                     "riskFactors": risk_factors_list
+                 })
+            
+            base_heatmap_risk.append({
+                "riskCategoryId": cat_id,
+                "phaseList": phase_list
+            })
+
         # --- 2. Aggregations ---
         
         # 2.1 Total Projects
@@ -331,6 +374,7 @@ class ProjectDAO:
                     "small": {"count": 0, "investment": 0},
                 },
                 "sector_stats": empty_sector_stats,
+                "heatmapRisk": base_heatmap_risk,
                 "investment_by_year": {},
                 "project_ids": []
             }
@@ -532,6 +576,57 @@ class ProjectDAO:
             if y:
                 investment_by_year[int(y)] = {"count": c, "investment": i or 0}
 
+        # 2.8 Heatmap Risk (Populating with actual project risks)
+        RiskAlias = aliased(Risk)
+        RCAssignAlias = aliased(RiskCategoryAssignment)
+        RFAssignAlias = aliased(RiskFactorAssignment)
+        
+        heatmap_query = (
+            select(
+                RCAssignAlias.risk_category_id,
+                RiskAlias.phase,
+                RFAssignAlias.risk_factor_id,
+                func.count(RiskAlias.risk_id)
+            )
+            .join(RCAssignAlias, RiskAlias.risk_id == RCAssignAlias.risk_id)
+            .join(RFAssignAlias, RiskAlias.risk_id == RFAssignAlias.risk_id)
+            .where(RiskAlias.project_id.in_(select(filtered_project_ids.c.id)))
+            .where(RiskAlias.phase.is_not(None))
+            .group_by(RCAssignAlias.risk_category_id, RiskAlias.phase, RFAssignAlias.risk_factor_id)
+        )
+        
+        heatmap_results = self.session.exec(heatmap_query).all()
+        heatmap_counts = {}
+        for r_cat_id, r_phase, r_fac_id, r_count in heatmap_results:
+            if r_phase:
+                pn = r_phase.strip().lower()
+                heatmap_counts[(r_cat_id, pn, r_fac_id)] = r_count
+
+        heatmap_risk = []
+        for cat in all_categories:
+            cat_id = cat.risk_category_id
+            phase_list = []
+            
+            for phase in all_phases:
+                 phase_name = phase.phase_name
+                 pn = phase_name.strip().lower()
+                 valid_factors = sorted(list(cat_phase_factors[cat_id].get(phase_name, [])))
+                 
+                 risk_factors_list = []
+                 for fac_id in valid_factors:
+                     count = heatmap_counts.get((cat_id, pn, fac_id), 0)
+                     risk_factors_list.append({"id": fac_id, "value": count})
+                 
+                 phase_list.append({
+                     "phase": phase_name,
+                     "riskFactors": risk_factors_list
+                 })
+            
+            heatmap_risk.append({
+                "riskCategoryId": cat_id,
+                "phaseList": phase_list
+            })
+
         return {
             "total_projects": total_projects,
             "total_investment": total_investment,
@@ -543,6 +638,7 @@ class ProjectDAO:
             "project_scales": project_scales,
             "sector_stats": sector_stats,
             "investment_by_year": investment_by_year,
+            "heatmapRisk": heatmap_risk,
             "project_ids": [row for row in self.session.exec(select(filtered_project_ids)).all()]
         }
 
