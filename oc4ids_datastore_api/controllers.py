@@ -134,6 +134,8 @@ def get_summary(
     agency: Optional[str] = Query(None),
     concessionForm: Optional[str] = Query(None), 
     contractType: Optional[str] = Query(None),
+    risk_category_id: Optional[str] = Query(None),
+    risk_factor_id: Optional[str] = Query(None),
     startDate: Optional[str] = None,
     endDate: Optional[str] = None,
     session: Session = Depends(get_session)
@@ -171,6 +173,8 @@ def get_summary(
         agency_id=parse_ids(agency),
         concession_form_id=parse_ids(concessionForm),
         contract_type_id=parse_ids(contractType),
+        risk_category_id=parse_ids(risk_category_id),
+        risk_factor_id=parse_ids(risk_factor_id),
         year_from=y_from,
         year_to=y_to
     )
