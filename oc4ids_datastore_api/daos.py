@@ -300,8 +300,8 @@ class ProjectDAO:
         
         # Generate Heatmap base structure
         from oc4ids_datastore_api.models import RiskCategory, RiskPhase, RiskPattern
-        all_categories = self.session.exec(select(RiskCategory)).order_by(RiskCategory.risk_category_id).all()
-        all_phases = self.session.exec(select(RiskPhase)).order_by(RiskPhase.phase_id).all()
+        all_categories = self.session.exec(select(RiskCategory).order_by(RiskCategory.risk_category_id)).all()
+        all_phases = self.session.exec(select(RiskPhase).order_by(RiskPhase.phase_id)).all()
         all_patterns = self.session.exec(select(RiskPattern)).all()
         
         # Build structure: cat_id -> phase_name -> list of valid factors (using Bit Mask)
