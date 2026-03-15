@@ -90,7 +90,7 @@ class ProjectDAO:
             FilterRiskCatAssign = aliased(RiskCategoryAssignment)
             id_query = id_query.join(FilterRiskForCat, Project.id == FilterRiskForCat.project_id)
             id_query = id_query.join(FilterRiskCatAssign, FilterRiskForCat.risk_id == FilterRiskCatAssign.risk_id)
-            id_query = id_query.where(FilterRiskCatAssign.risk_category_id.in_(risk_category_id))
+            id_query = id_query.where(FilterRiskCatAssign.risk_category_id.in_(risk_category_id)).distinct()
             
         if risk_factor_id:
             FilterRiskForFactor = aliased(Risk)
@@ -101,7 +101,7 @@ class ProjectDAO:
             else:
                 FilterRiskForFactor = FilterRiskForCat
             id_query = id_query.join(FilterRiskFactorAssign, FilterRiskForFactor.risk_id == FilterRiskFactorAssign.risk_id)
-            id_query = id_query.where(FilterRiskFactorAssign.risk_factor_id.in_(risk_factor_id))
+            id_query = id_query.where(FilterRiskFactorAssign.risk_factor_id.in_(risk_factor_id)).distinct()
         
         if year_from or year_to:
              id_query = id_query.join(FilterLastPeriod, (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == 'duration'))

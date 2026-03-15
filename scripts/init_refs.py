@@ -306,7 +306,7 @@ def init_risk_factors():
     """Delegates to the existing seed_risk_factors script."""
     print("Initializing Risk Factors...")
     import importlib.util, os
-    script = os.path.join(os.path.dirname(__file__), "scripts", "seed_risk_factors.py")
+    script = os.path.join(os.path.dirname(__file__), "seed_risk_factors.py")
     spec = importlib.util.spec_from_file_location("seed_risk_factors", script)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

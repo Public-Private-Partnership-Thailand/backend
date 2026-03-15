@@ -19,7 +19,8 @@ from oc4ids_datastore_api.models import (
     ContractingTender, ContractingTenderTenderer, ContractingTenderEntity, ContractingTenderSustainability, 
     ContractingSupplier, ContractingSocial, ContractingRelease, LocationGazetteer, LocationGazetteerIdentifier,
     ProjectPolicyAlignment, ProjectPolicyAlignmentPolicy, ProjectAssetLifetime,
-    Risk, Mitigation, Impact, RiskCategory, RiskFactor, RiskCategoryAssignment, RiskFactorAssignment
+    Risk, Mitigation, Impact, RiskCategory, RiskFactor, RiskCategoryAssignment, RiskFactorAssignment,
+    RiskPattern, RiskPhase
 )
 from oc4ids_datastore_api.daos import ProjectDAO, ReferenceDataDAO
 from oc4ids_datastore_api.utils import format_thai_amount
@@ -627,6 +628,35 @@ def _create_risks(session: Session, project_id: uuid.UUID, risks_list: List[Dict
                         ))
                 else:
                     logger.warning(f"RiskFactor '{factor_name}' not found. Skipping factor assignment.")
+
+                # --- Upsert RiskPattern (category + factor → phase bitmask) ---
+                if rc_obj and rf_obj:
+                    phase_id = r_data.get("phase")
+                    phase_bitmask = 0
+                    if phase_id:
+                        phase_row = session.exec(
+                            select(RiskPhase).where(RiskPhase.phase_id == phase_id)
+                        ).first()
+                        if phase_row and phase_row.phase_id_from_bit_mask is not None:
+                            phase_bitmask = phase_row.phase_id_from_bit_mask
+
+                    existing_pattern = session.exec(
+                        select(RiskPattern).where(
+                            RiskPattern.risk_category_id == rc_obj.risk_category_id,
+                            RiskPattern.risk_factor_id == rf_obj.risk_factor_id
+                        )
+                    ).first()
+
+                    if existing_pattern:
+                        existing_pattern.phase = existing_pattern.phase | phase_bitmask
+                        session.add(existing_pattern)
+                    else:
+                        session.add(RiskPattern(
+                            risk_category_id=rc_obj.risk_category_id,
+                            risk_factor_id=rf_obj.risk_factor_id,
+                            phase=phase_bitmask,
+                            source=0
+                        ))
 
         # --- Mitigations ---
         for mit in r_data.get("mitigation_handling", []):
