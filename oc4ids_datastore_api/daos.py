@@ -685,6 +685,11 @@ class ReferenceDataDAO:
         return self.session.exec(
             select(RiskCategory).order_by(RiskCategory.risk_category_id)
         ).all()
+    def get_phase(self) -> List:
+        from oc4ids_datastore_api.models import RiskPhase
+        return self.session.exec(
+            select(RiskPhase).order_by(RiskPhase.phase_id)
+        ).all()
 
     def get_risk_factors(self) -> List:
         """Fetch all risk factors"""

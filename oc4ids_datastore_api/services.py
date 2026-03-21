@@ -1308,6 +1308,7 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
     concession_forms = dao.get_concession_forms()
     contract_types = dao.get_contract_types()
     risk_categories = dao.get_risk_categories()
+    risk_phase = dao.get_phase()
     risk_factors = dao.get_risk_factors()
     
     return {
@@ -1340,6 +1341,13 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
                 "description_th": rc.description_th,
             }
             for rc in risk_categories
+        ],
+        "riskPhase": [
+            {
+                "id": rp.phase_id,
+                "value": rp.phase_name,
+            }
+            for rp in risk_phase
         ],
         "riskFactor": [
             {
