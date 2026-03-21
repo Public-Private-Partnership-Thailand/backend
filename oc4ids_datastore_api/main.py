@@ -15,10 +15,69 @@ from oc4ids_datastore_api.controllers import router
 from oc4ids_datastore_api.exceptions import validation_exception_handler, global_exception_handler
 from oc4ids_datastore_api.middleware import PerformanceMiddleware
 
+# ──────────────────────────────────────────────────────────────────────────────
+#  OpenAPI Tags Metadata
+# ──────────────────────────────────────────────────────────────────────────────
+tags_metadata = [
+    {
+        "name": "Projects",
+        "description": "จัดการข้อมูลโครงการ PPP — สร้าง ดู แก้ไข ลบ และเปรียบเทียบโครงการ (CRUD + Compare)",
+    },
+    {
+        "name": "Dashboard",
+        "description": "ข้อมูลสรุปสถิติสำหรับหน้า Dashboard — จำนวนโครงการ มูลค่ารวม สถิติกระทรวง ฯลฯ",
+    },
+    {
+        "name": "Upload",
+        "description": "อัปโหลดไฟล์ข้อมูลโครงการ — รองรับ JSON (single/batch) และ CSV",
+    },
+    {
+        "name": "Reference Data",
+        "description": "ข้อมูลอ้างอิง (lookup) สำหรับ dropdown และ filter — กลุ่มธุรกิจ กระทรวง ประเภทสัญญา ความเสี่ยง ฯลฯ",
+    },
+]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  App Initialization
+# ──────────────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="OC4IDS Datastore API",
     version="1.0.0",
-    description="Professional grade API for OC4IDS project management."
+    description="""
+##  OC4IDS Datastore API
+
+API สำหรับจัดการข้อมูลโครงการร่วมลงทุนระหว่างรัฐและเอกชน (PPP) 
+ตามมาตรฐาน **OC4IDS** (Open Contracting for Infrastructure Data Standard)
+
+###  ความสามารถหลัก
+
+| Feature | Description |
+|---------|-------------|
+|  **Dashboard** | ดึงสถิติรวมสำหรับ Dashboard |
+|  **Projects CRUD** | สร้าง ดู แก้ไข ลบโครงการ |
+|  **File Upload** | Import ข้อมูลจาก JSON/CSV |
+|  **Search & Filter** | ค้นหาและกรองตามหลายเงื่อนไข |
+|  **Reference Data** | ข้อมูลอ้างอิงสำหรับ dropdown |
+|  **Compare** | เปรียบเทียบโครงการหลายรายการ |
+
+###  Base URL
+```
+/api/v1
+```
+
+###  Data Standard
+[OC4IDS Documentation](https://standard.open-contracting.org/infrastructure/latest/en/)
+""",
+    openapi_tags=tags_metadata,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    contact={
+        "name": "OC4IDS Datastore Team",
+    },
+    license_info={
+        "name": "MIT License",
+    },
 )
 
 # Register Exception Handlers
@@ -52,18 +111,4 @@ app.add_middleware(
 )
 
 # Include Router with Versioning
-# Include Router with Versioning
-app.include_router(router, prefix="/api/v1", tags=["Projects"])
-
-from oc4ids_datastore_api.database import engine
-from sqlmodel import SQLModel
-
-@app.get("/api/debug/reset-db")
-def debug_reset_db():
-    try:
-        SQLModel.metadata.drop_all(engine)
-        SQLModel.metadata.create_all(engine)
-        return {"status": "success", "message": "Database reset successfully."}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
+app.include_router(router, prefix="/api/v1")

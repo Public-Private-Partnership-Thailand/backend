@@ -749,7 +749,7 @@ def add_metadata(project_data: Dict[str, Any]) -> Dict[str, Any]:
         "projects": [project_data]
     }
 
-def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[str, Any]:
+def create_project_data(project_data: Dict[str, Any], session: Session, auto_commit: bool = True) -> Dict[str, Any]:
     """Validates and stores project data"""
     input_id = project_data.get("id")
     pid = None
@@ -1242,20 +1242,28 @@ def create_project_data(project_data: Dict[str, Any], session: Session) -> Dict[
     #(end of REVIEW)
 
     # Commit all changes
-    try:
-        session.commit()
-        logger.info(f"Successfully committed project {project_id_str}")
-    except Exception as e:
-        logger.error(f"Error committing project {project_id_str}: {e}")
-        session.rollback()
-        raise e
+    if auto_commit:
+        try:
+            session.commit()
+            logger.info(f"Successfully committed project {project_id_str}")
+        except Exception as e:
+            logger.error(f"Error committing project {project_id_str}: {e}")
+            session.rollback()
+            raise e
+    else:
+        session.flush()
+        logger.info(f"Flushed project {project_id_str} (commit deferred)")
         
     session.refresh(db_project)
     
     return {"message": "Project created successfully", "project": {"id": str(db_project.id), "title": db_project.title}}
 
 def update_project_data(project_id: str, project_data: Dict[str, Any], session: Session) -> Dict[str, Any]:
-    """Updates an existing project by deleting and recreating it"""
+    """Updates an existing project by deleting and recreating it.
+    
+    Both delete and create happen in a single transaction.
+    If create fails, the delete is rolled back and original data is preserved.
+    """
     logger.info(f"Starting update for project {project_id}")
     dao = ProjectDAO(session)
     existing_project = dao.get_by_id(project_id)
@@ -1265,26 +1273,33 @@ def update_project_data(project_id: str, project_data: Dict[str, Any], session: 
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
     try:
+        # Step 1: Delete (flush only, no commit)
         logger.info(f"Deleting existing project {project_id}")
-        dao.delete(project_id, hard_delete=True)
-        logger.info(f"Deleted existing project {project_id} (Hard Delete)")
-    except ValueError as e:
-         logger.error(f"Error deleting project {project_id}: {e}")
-         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
-    except Exception as e:
-         logger.error(f"Unexpected error deleting project {project_id}: {e}")
-         raise e
-    
-    session.expire_all()
-    
+        dao.delete(project_id, hard_delete=True, auto_commit=False)
+        logger.info(f"Flushed delete for project {project_id}")
 
-    project_data["id"] = project_id
-    
-    logger.info(f"Re-creating project {project_id} with new data")
-    try:
-        return create_project_data(project_data, session)
+        session.expire_all()
+
+        # Step 2: Recreate (flush only, no commit)
+        project_data["id"] = project_id
+        logger.info(f"Re-creating project {project_id} with new data")
+        result = create_project_data(project_data, session, auto_commit=False)
+
+        # Step 3: Commit everything in one transaction
+        session.commit()
+        logger.info(f"Successfully committed update for project {project_id}")
+        return result
+
+    except ValueError as e:
+        logger.error(f"Error updating project {project_id}: {e}")
+        session.rollback()
+        raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
+    except HTTPException:
+        session.rollback()
+        raise
     except Exception as e:
-        logger.error(f"Error re-creating project {project_id}: {e}")
+        logger.error(f"Unexpected error updating project {project_id}: {e}")
+        session.rollback()
         raise e
 
 def delete_project_data(project_id: str, session: Session) -> Dict[str, Any]:

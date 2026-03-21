@@ -186,7 +186,7 @@ class ProjectDAO:
         self.session.refresh(project)
         return project
 
-    def delete(self, project_id: str, hard_delete: bool = False) -> None:
+    def delete(self, project_id: str, hard_delete: bool = False, auto_commit: bool = True) -> None:
         from datetime import datetime
         
         project = self.session.get(Project, project_id)
@@ -199,8 +199,11 @@ class ProjectDAO:
         else:
             project.deleted_at = datetime.utcnow()
             self.session.add(project)
-            
-        self.session.commit()
+        
+        if auto_commit:
+            self.session.commit()
+        else:
+            self.session.flush()
 
     def get_dashboard_stats(
         self,
