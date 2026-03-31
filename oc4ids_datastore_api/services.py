@@ -1565,5 +1565,6 @@ def get_dashboard_summary(
         "investmentByYear": investment_by_year_list,
         "businessGroupStats": business_group_stats,
         "sectorCounts": {k: v["total"]["count"] for k,v in sector_stats.items()},
-        "countProjectGroupByPublicAuthority": stats.get("pa_stats", [])
+        "countProjectGroupByPublicAuthority": stats.get("pa_stats", []),
+        "sectorProjectValueBubble": stats.get("bubble_stats", [])
     }

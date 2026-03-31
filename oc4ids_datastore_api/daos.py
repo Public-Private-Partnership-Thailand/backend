@@ -553,6 +553,40 @@ class ProjectDAO:
         pa_results = self.session.exec(pa_query).all()
         pa_stats = [{"publicAuthorityName": row[0], "projectCount": row[1]} for row in pa_results]
 
+        # 2.10 Sector Project Value Bubble
+        SectorBubbleAlias = aliased(Sector)
+        bubble_query = (
+            select(
+                SectorBubbleAlias.code.label("sector"),
+                func.count(func.distinct(Project.id)).label("projectCount"),
+                func.sum(ProjectBudgetAlias.total_amount).label("totalValue"),
+                func.count(func.distinct(Project.public_authority_id)).label("authorityCount")
+            )
+            .join(ProjectSectorLink, Project.id == ProjectSectorLink.project_id)
+            .join(SectorBubbleAlias, ProjectSectorLink.sector_id == SectorBubbleAlias.id)
+            .outerjoin(ProjectBudgetAlias, Project.id == ProjectBudgetAlias.project_id)
+            .where(Project.id.in_(select(filtered_project_ids.c.id)))
+            .group_by(SectorBubbleAlias.id, SectorBubbleAlias.code)
+        )
+        bubble_results = self.session.exec(bubble_query).all()
+        
+        all_active_sectors = self.session.exec(select(Sector).where(Sector.is_active == True)).all()
+        bubble_map = {s.code: {"sector": s.code, "projectCount": 0, "totalValue": 0, "authorityCount": 0} for s in all_active_sectors}
+        
+        if "others" not in bubble_map:
+            bubble_map["others"] = {"sector": "others", "projectCount": 0, "totalValue": 0, "authorityCount": 0}
+
+        for row in bubble_results:
+            s_code = row[0]
+            if s_code in bubble_map:
+                bubble_map[s_code]["projectCount"] = row[1]
+                bubble_map[s_code]["totalValue"] = float(row[2] or 0)
+                bubble_map[s_code]["authorityCount"] = row[3]
+            else:
+                 bubble_map[s_code] = {"sector": s_code, "projectCount": row[1], "totalValue": float(row[2] or 0), "authorityCount": row[3]}
+
+        sector_bubble_stats = list(bubble_map.values())
+
         return {
             "total_projects": total_projects,
             "total_investment": total_investment,
@@ -566,6 +600,7 @@ class ProjectDAO:
             "sector_stats": sector_stats,
             "investment_by_year": investment_by_year,
             "pa_stats": pa_stats,
+            "bubble_stats": sector_bubble_stats,
             "project_ids": [row for row in self.session.exec(select(filtered_project_ids)).all()]
         }
 

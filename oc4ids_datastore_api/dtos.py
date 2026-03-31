@@ -593,6 +593,12 @@ class PublicAuthorityCountResponse(BaseModel):
     """Summary of projects per public authority"""
     publicAuthorityName: str
     projectCount: int
+class SectorBubbleResponse(BaseModel):
+    """Summary of project metrics per sector for bubble chart"""
+    sector: str
+    projectCount: int
+    totalValue: float
+    authorityCount: int
 
 class DashboardSummaryResponse(BaseModel):
     """Complete dashboard summary response"""
@@ -607,6 +613,7 @@ class DashboardSummaryResponse(BaseModel):
     businessGroupStats: List[BusinessGroupStatResponse] = Field(..., description="Stats by business sector")
     sectorCounts: Optional[Dict[str, int]] = Field(None, description="Project count per sector")
     countProjectGroupByPublicAuthority: List[PublicAuthorityCountResponse] = Field(..., description="Project count per public authority")
+    sectorProjectValueBubble: List[SectorBubbleResponse] = Field(..., description="Project metrics per sector for bubble chart")
 
 
 # ============================================================================
