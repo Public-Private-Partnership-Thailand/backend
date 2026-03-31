@@ -589,10 +589,6 @@ class BusinessGroupStatResponse(BaseModel):
     medium: Optional[Dict[str, Any]] = None
     big: Optional[Dict[str, Any]] = None
 
-class HeatmapRiskItem(BaseModel):
-    """Risk heatmap cell data"""
-    model_config = {"extra": "allow"}
-
 class DashboardSummaryResponse(BaseModel):
     """Complete dashboard summary response"""
     summary: SummaryStatsResponse
@@ -605,7 +601,6 @@ class DashboardSummaryResponse(BaseModel):
     investmentByYear: List[InvestmentByYearResponse] = Field(..., description="Yearly investment chart data")
     businessGroupStats: List[BusinessGroupStatResponse] = Field(..., description="Stats by business sector")
     sectorCounts: Optional[Dict[str, int]] = Field(None, description="Project count per sector")
-    heatmapRisk: Optional[List[Any]] = Field(None, description="Risk heatmap data")
 
 
 # ============================================================================
