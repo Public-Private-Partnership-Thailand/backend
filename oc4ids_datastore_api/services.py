@@ -1312,7 +1312,7 @@ def delete_project_data(project_id: str, session: Session) -> Dict[str, Any]:
     dao.delete(project_id)
     return {"message": "Project deleted successfully"}
 
-def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
+def get_reference_info(session: Session) -> Dict[str, Any]:
     """Fetch reference/lookup data for dropdowns and filters"""
     dao = ReferenceDataDAO(session)
     
@@ -1325,6 +1325,7 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
     risk_categories = dao.get_risk_categories()
     risk_phase = dao.get_phase()
     risk_factors = dao.get_risk_factors()
+    risk_sources = dao.get_risk_sources()
     
     return {
         "sector": [
@@ -1372,6 +1373,25 @@ def get_reference_info(session: Session) -> Dict[str, List[Dict[str, Any]]]:
             }
             for rf in risk_factors
         ],
+        "riskSource": {
+            country: [
+                {"id": rs.rs_id, "value": rs.meaning}
+                for rs in risk_sources if rs.country == country
+            ]
+            for country in sorted(list(set(rs.country for rs in risk_sources if rs.country)))
+        } or {
+            # Fallback data if DB is empty, can be removed if strictly loading from DB
+            "global": [
+                {"id": 1, "value": "GI hub"},
+                {"id": 2, "value": "Yongjian Ke et al. (China)"},
+                {"id": 3, "value": "Sy Tien Do (Vietnam)"},
+                {"id": 4, "value": "Nur Alkaf Abd Karim (Malaysia)"}
+            ],
+            "thailand": [
+                {"id": 1, "value": "SEPO"},
+                {"id": 2, "value": "รายงาน สนข."}
+            ]
+        }
     }
 
 def get_dashboard_summary(

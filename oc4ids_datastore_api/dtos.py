@@ -631,6 +631,9 @@ class RiskFactorItem(BaseModel):
     value: str = Field(..., description="Factor name")
     description_th: Optional[str] = None
 
+# RiskSourceResponse is now a dynamic dictionary where keys are country names (e.g., 'global', 'thailand')
+RiskSourceResponse = Dict[str, List[ReferenceItem]]
+
 class ReferenceInfoResponse(BaseModel):
     """All reference/lookup data for dropdowns and filters"""
     sector: List[ReferenceItem] = Field(..., description="Available sectors")
@@ -641,6 +644,7 @@ class ReferenceInfoResponse(BaseModel):
     riskCategory: List[RiskCategoryItem] = Field(..., description="Available risk categories")
     riskPhase: List[ReferenceItem] = Field(..., description="Risk phases")
     riskFactor: List[RiskFactorItem] = Field(..., description="Available risk factors")
+    riskSource: RiskSourceResponse = Field(..., description="Available risk sources")
 
 
 # ============================================================================

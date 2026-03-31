@@ -700,3 +700,10 @@ class ReferenceDataDAO:
         return self.session.exec(
             select(RiskFactor).order_by(RiskFactor.risk_factor_id)
         ).all()
+
+    def get_risk_sources(self) -> List:
+        """Fetch all risk sources"""
+        from oc4ids_datastore_api.models import RiskSource
+        return self.session.exec(
+            select(RiskSource).order_by(RiskSource.rs_id)
+        ).all()

@@ -42,10 +42,11 @@ tags_metadata = [
 #  App Initialization
 # ──────────────────────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="OC4IDS Datastore API",
+    title="PPP Intelligence Platform for Thailand Datastore API ",
     version="1.0.0",
     description="""
-##  OC4IDS Datastore API
+## OC4IDS Datastore API
+
 
 API สำหรับจัดการข้อมูลโครงการร่วมลงทุนระหว่างรัฐและเอกชน (PPP) 
 ตามมาตรฐาน **OC4IDS** (Open Contracting for Infrastructure Data Standard)
