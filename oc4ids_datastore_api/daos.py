@@ -307,7 +307,6 @@ class ProjectDAO:
         total_projects = self.session.exec(select(func.count()).select_from(filtered_project_ids)).one()
         
         if total_projects == 0:
-            from oc4ids_datastore_api.models import Sector
             all_active_sectors_query = select(Sector.name_en).where(Sector.is_active == True)
             all_active_sectors = self.session.exec(all_active_sectors_query).all()
             
@@ -325,6 +324,7 @@ class ProjectDAO:
                 "total_investment": 0,
                 "max_budget": 0,
                 "unique_contractors": 0,
+                "unique_public_authority": 0,
                 "inprogress_projects": 0,
                 "ministry_counts": {},
                 "ministry_investments": {},
@@ -362,6 +362,10 @@ class ProjectDAO:
         AgencyCountAlias = aliased(Agency)
         contractor_query = select(func.count(AgencyCountAlias.id)).where(AgencyCountAlias.ministry_id.is_(None))
         unique_contractors = self.session.exec(contractor_query).one()
+        
+        # 2.3.1 Unique Public Authority
+        authority_query = select(func.count(func.distinct(Project.public_authority_id))).where(Project.id.in_(select(filtered_project_ids.c.id)))
+        unique_public_authority = self.session.exec(authority_query).one() or 0
 
         ProjectPartyAlias = aliased(ProjectParty)
 
@@ -456,7 +460,6 @@ class ProjectDAO:
         )
         
         # Start with all active sectors
-        from oc4ids_datastore_api.models import Sector
         all_active_sectors_query = select(Sector.name_en).where(Sector.is_active == True)
         all_active_sectors = self.session.exec(all_active_sectors_query).all()
         
@@ -535,17 +538,34 @@ class ProjectDAO:
             if y:
                 investment_by_year[int(y)] = {"count": c, "investment": i or 0}
 
+        # 2.9 Group project count by Public Authority
+        PublicAuthAgency = aliased(Agency)
+        pa_query = (
+            select(
+                PublicAuthAgency.name_th.label("publicAuthorityName"),
+                func.count(Project.id).label("projectCount")
+            )
+            .join(PublicAuthAgency, Project.public_authority_id == PublicAuthAgency.id)
+            .where(Project.id.in_(select(filtered_project_ids.c.id)))
+            .group_by(PublicAuthAgency.id, PublicAuthAgency.name_th)
+            .order_by(func.count(Project.id).desc())
+        )
+        pa_results = self.session.exec(pa_query).all()
+        pa_stats = [{"publicAuthorityName": row[0], "projectCount": row[1]} for row in pa_results]
+
         return {
             "total_projects": total_projects,
             "total_investment": total_investment,
             "max_budget": max_budget,
             "unique_contractors": unique_contractors,
+            "unique_public_authority": unique_public_authority,
             "inprogress_projects": inprogress_projects,
             "ministry_counts": ministry_counts,
             "ministry_investments": ministry_investments,
             "project_scales": project_scales,
             "sector_stats": sector_stats,
             "investment_by_year": investment_by_year,
+            "pa_stats": pa_stats,
             "project_ids": [row for row in self.session.exec(select(filtered_project_ids)).all()]
         }
 

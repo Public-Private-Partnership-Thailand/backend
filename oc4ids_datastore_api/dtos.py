@@ -541,6 +541,7 @@ class SummaryStatsResponse(BaseModel):
     """High-level aggregated statistics"""
     totalProjects: int = Field(..., description="Total number of projects", examples=[150])
     uniqueContractors: int = Field(..., description="Number of unique contractors", examples=[42])
+    uniquePublicAuthority: int = Field(..., description="Number of unique public authorities", examples=[10])
     totalInvestment: str = Field(..., description="Total investment (Thai formatted)", examples=["1,500,000,000.00"])
     maxBudget: str = Field(..., description="Maximum single project budget (Thai formatted)")
     inprogressProjects: int = Field(..., description="Number of projects currently in progress")
@@ -588,6 +589,10 @@ class BusinessGroupStatResponse(BaseModel):
     small: Optional[Dict[str, Any]] = None
     medium: Optional[Dict[str, Any]] = None
     big: Optional[Dict[str, Any]] = None
+class PublicAuthorityCountResponse(BaseModel):
+    """Summary of projects per public authority"""
+    publicAuthorityName: str
+    projectCount: int
 
 class DashboardSummaryResponse(BaseModel):
     """Complete dashboard summary response"""
@@ -601,6 +606,7 @@ class DashboardSummaryResponse(BaseModel):
     investmentByYear: List[InvestmentByYearResponse] = Field(..., description="Yearly investment chart data")
     businessGroupStats: List[BusinessGroupStatResponse] = Field(..., description="Stats by business sector")
     sectorCounts: Optional[Dict[str, int]] = Field(None, description="Project count per sector")
+    countProjectGroupByPublicAuthority: List[PublicAuthorityCountResponse] = Field(..., description="Project count per public authority")
 
 
 # ============================================================================

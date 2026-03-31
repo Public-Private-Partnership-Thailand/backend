@@ -873,13 +873,23 @@ def create_project_data(project_data: Dict[str, Any], session: Session, auto_com
     # - Additional Classifications
     if "additionalClassifications" in project_data:
         for ac in project_data["additionalClassifications"]:
-            stmt = select(AdditionalClassification).where(
-                AdditionalClassification.scheme == ac.get("scheme"),
-                AdditionalClassification.code == ac.get("id")
+            scheme = ac.get("scheme")
+            code = ac.get("id") or ac.get("code")
+            if not scheme or not code:
+                continue
+                
+            ac_obj = _get_or_create_ref(
+                session, 
+                AdditionalClassification, 
+                "code", 
+                code, 
+                {"scheme": scheme, "description": ac.get("description")}
             )
-            ac_obj = session.exec(stmt).first()
-            if not ac_obj:
-                raise ValueError(f"AdditionalClassification with scheme '{ac.get('scheme')}' and code '{ac.get('id')}' not found in database")
+            
+            # Ensure scheme matches even if record existed (optional refinement)
+            if ac_obj.scheme != scheme:
+                ac_obj.scheme = scheme
+                session.add(ac_obj)
             
             db_project.additional_classifications.append(ac_obj)
 
@@ -1337,7 +1347,7 @@ def get_reference_info(session: Session) -> Dict[str, Any]:
             for m in ministries
         ],
         "projectType": [
-            {"id": pt.id, "value": pt.name_th}
+            {"id": pt.id, "value": pt.name_th or pt.name_en or pt.code}
             for pt in project_types
         ],
         "concessionForm": [
@@ -1541,6 +1551,7 @@ def get_dashboard_summary(
         "summary": {
             "totalProjects": total_projects,
             "uniqueContractors": unique_contractors,
+            "uniquePublicAuthority": stats.get("unique_public_authority", 0),
             "totalInvestment": format_thai_amount(total_investment),
             "maxBudget": format_thai_amount(max_budget),
             "inprogressProjects": inprogress_projects
@@ -1554,4 +1565,5 @@ def get_dashboard_summary(
         "investmentByYear": investment_by_year_list,
         "businessGroupStats": business_group_stats,
         "sectorCounts": {k: v["total"]["count"] for k,v in sector_stats.items()},
+        "countProjectGroupByPublicAuthority": stats.get("pa_stats", [])
     }
