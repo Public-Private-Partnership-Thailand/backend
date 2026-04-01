@@ -1568,3 +1568,156 @@ def get_dashboard_summary(
         "countProjectGroupByPublicAuthority": stats.get("pa_stats", []),
         "sectorProjectValueBubble": stats.get("bubble_stats", [])
     }
+
+
+def get_risk_analysis(session: Session) -> Dict[str, Any]:
+    """Build risk analysis data: heatmapRiskPhase + sectorMinistryHeatmap"""
+    from collections import defaultdict
+    from oc4ids_datastore_api.models import (
+        RiskCategory, RiskFactor, RiskPhase, RiskPattern, RiskSource,
+        Risk, RiskCategoryAssignment, RiskFactorAssignment,
+        Sector, ProjectSectorLink
+    )
+
+    # --- Load reference data ---
+    all_categories = session.exec(select(RiskCategory).order_by(RiskCategory.risk_category_id)).all()
+    all_factors = session.exec(select(RiskFactor).order_by(RiskFactor.risk_factor_id)).all()
+    all_phases = session.exec(select(RiskPhase).order_by(RiskPhase.phase_id)).all()
+    all_sources = session.exec(select(RiskSource).order_by(RiskSource.rs_id)).all()
+    all_patterns = session.exec(select(RiskPattern)).all()
+
+    # Build lookup maps
+    cat_code_map = {c.risk_category_id: c.category_code for c in all_categories}
+    factor_name_map = {f.risk_factor_id: f.factor_name for f in all_factors}
+
+    # Phase bitmask → phase name mapping
+    phase_bit_map = {}
+    for p in all_phases:
+        if p.phase_id_from_bit_mask:
+            phase_bit_map[p.phase_id_from_bit_mask] = p.phase_name
+
+    # Source bitmask → (rs_id, country) mapping
+    source_bit_map = {}
+    for s in all_sources:
+        if s.rs_id_from_bit_mask:
+            source_bit_map[s.rs_id_from_bit_mask] = (s.rs_id, s.country)
+
+    # --- Build heatmapRiskPhase ---
+    # Collect thailand-otp project data: which projects reference each (category, factor) pair
+    from sqlalchemy.orm import aliased
+    from sqlalchemy import func
+
+    RiskAlias = aliased(Risk)
+    RCAlias = aliased(RiskCategoryAssignment)
+    RFAlias = aliased(RiskFactorAssignment)
+
+    otp_query = (
+        select(
+            RCAlias.risk_category_id,
+            RFAlias.risk_factor_id,
+            RiskAlias.project_id,
+            Project.title
+        )
+        .join(RCAlias, RiskAlias.risk_id == RCAlias.risk_id)
+        .join(RFAlias, RiskAlias.risk_id == RFAlias.risk_id)
+        .join(Project, RiskAlias.project_id == Project.id)
+        .where(Project.deleted_at.is_(None))
+    )
+    otp_results = session.exec(otp_query).all()
+
+    # Group OTP data by (cat_id, factor_id)
+    otp_map = defaultdict(list)
+    for cat_id, fac_id, p_id, p_title in otp_results:
+        otp_map[(cat_id, fac_id)].append({
+            "projectId": str(p_id),
+            "title": p_title
+        })
+
+    heatmap = {}
+    for pattern in all_patterns:
+        cat_code = cat_code_map.get(pattern.risk_category_id)
+        fac_name = factor_name_map.get(pattern.risk_factor_id)
+        if not cat_code or not fac_name:
+            continue
+
+        # Decode phase bitmask
+        phase_list = []
+        p_bitmask = pattern.phase or 0
+        for bit_val, phase_name in sorted(phase_bit_map.items()):
+            if p_bitmask & bit_val:
+                phase_list.append(phase_name)
+
+        # Decode source bitmask → group by country
+        source_dict = defaultdict(list)
+        s_bitmask = pattern.source or 0
+        for bit_val, (rs_id, country) in sorted(source_bit_map.items()):
+            if s_bitmask & bit_val:
+                if country:
+                    source_dict[country].append(rs_id)
+
+        # Ensure 'global' and 'thailand' keys always exist
+        if "global" not in source_dict:
+            source_dict["global"] = []
+        if "thailand" not in source_dict:
+            source_dict["thailand"] = []
+
+        # Add thailand-otp (project-level risk data)
+        otp_data = otp_map.get((pattern.risk_category_id, pattern.risk_factor_id), [])
+        if otp_data:
+            source_dict["thailand-otp"] = otp_data
+
+        if cat_code not in heatmap:
+            heatmap[cat_code] = {}
+
+        heatmap[cat_code][fac_name] = {
+            "phase": phase_list,
+            "source": dict(source_dict)
+        }
+
+    # --- Build sectorMinistryHeatmap ---
+    # Count how many project-risks fall into each (sector, risk_category) pair
+    all_active_sectors = session.exec(select(Sector).where(Sector.is_active == True)).all()
+    sector_codes = [s.code for s in all_active_sectors]
+    if "others" not in sector_codes:
+        sector_codes.append("others")
+
+    cat_ids = [c.risk_category_id for c in all_categories]
+
+    SectorAlias = aliased(Sector)
+    sector_risk_query = (
+        select(
+            SectorAlias.code.label("sector"),
+            RCAlias.risk_category_id,
+            func.count(func.distinct(RiskAlias.risk_id)).label("cnt")
+        )
+        .join(RCAlias, RiskAlias.risk_id == RCAlias.risk_id)
+        .join(Project, RiskAlias.project_id == Project.id)
+        .join(ProjectSectorLink, Project.id == ProjectSectorLink.project_id)
+        .join(SectorAlias, ProjectSectorLink.sector_id == SectorAlias.id)
+        .where(Project.deleted_at.is_(None))
+        .group_by(SectorAlias.code, RCAlias.risk_category_id)
+    )
+    sector_risk_results = session.exec(sector_risk_query).all()
+
+    # Build lookup: (sector_code, cat_id) -> count
+    sr_count = {}
+    for s_code, c_id, cnt in sector_risk_results:
+        sr_count[(s_code, c_id)] = cnt
+
+    sector_ministry_heatmap = []
+    for s_code in sector_codes:
+        ministry_list = []
+        for cat in all_categories:
+            ministry_list.append({
+                "id": cat.risk_category_id,
+                "value": sr_count.get((s_code, cat.risk_category_id), 0)
+            })
+        sector_ministry_heatmap.append({
+            "sector": s_code,
+            "ministryList": ministry_list
+        })
+
+    return {
+        "heatmapRiskPhase": heatmap,
+        "sectorMinistryHeatmap": sector_ministry_heatmap
+    }

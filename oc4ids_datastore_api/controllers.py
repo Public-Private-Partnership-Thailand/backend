@@ -17,7 +17,8 @@ from oc4ids_datastore_api.services import (
     delete_project_data,
     get_reference_info,
     get_dashboard_summary,
-    get_projects_comparison
+    get_projects_comparison,
+    get_risk_analysis
 )
 from oc4ids_datastore_api.dtos import (
     ProjectListResponse,
@@ -28,6 +29,7 @@ from oc4ids_datastore_api.dtos import (
     UploadResponse,
     DashboardSummaryResponse,
     ReferenceInfoResponse,
+    RiskAnalysisResponse,
     ErrorDetail,
 )
 
@@ -492,3 +494,31 @@ def get_info(
     session: Session = Depends(get_session)
 ) -> Dict[str, Any]:
     return get_reference_info(session)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  GET /risk — Risk Analysis
+# ──────────────────────────────────────────────────────────────────────────────
+@router.get(
+    "/risk",
+    response_model=RiskAnalysisResponse,
+    summary="ดึงข้อมูลวิเคราะห์ความเสี่ยง",
+    description="""
+ดึงข้อมูลวิเคราะห์ความเสี่ยงสำหรับหน้า Risk Analysis
+
+### ข้อมูลที่ส่งคืน
+| Key | Description |
+|-----|-------------|
+| `heatmapRiskPhase` | Risk Pattern จัดกลุ่มตาม Category Code และ Factor Name พร้อม Phase และ Source |
+| `sectorMinistryHeatmap` | จำนวนความเสี่ยงแยกตาม Sector และ Risk Category |
+""",
+    response_description="ข้อมูลวิเคราะห์ความเสี่ยงทั้งหมด",
+    responses={
+        200: {"description": "สำเร็จ"},
+    },
+    tags=["Risk Analysis"],
+)
+def get_risk(
+    session: Session = Depends(get_session)
+) -> Dict[str, Any]:
+    return get_risk_analysis(session)
