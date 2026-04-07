@@ -668,6 +668,37 @@ Table category_factor_link {
   risk_factor_id integer [pk]
 }
 
+Table risk_source {
+  rs_id integer [pk]
+  rs_id_from_bit_mask integer [note: 'Power of 2 (1, 2, 4, 8, ...)']
+  meaning varchar
+  country varchar
+  reference varchar [note: 'Text citation, e.g. "Ke et al., 2010"']
+  reference_file varchar [note: 'Filename for download, e.g. "report.pdf"']
+  reference_url varchar [note: 'External URL link to paper/resource']
+
+  Note: 'Risk sources / references'
+}
+
+Table risk_phase {
+  phase_id integer [pk]
+  phase_id_from_bit_mask integer [note: 'Power of 2 (1, 2, 4)']
+  phase_name varchar
+  meaning varchar
+
+  Note: 'Risk lifecycle phases (pre-construction, construction, operation)'
+}
+
+Table risk_pattern {
+  risk_pattern_id integer [pk]
+  risk_category_id integer [not null]
+  risk_factor_id integer [not null]
+  phase integer [note: 'Bitmask of risk_phase']
+  source integer [note: 'Bitmask of risk_source']
+
+  Note: 'Mapping of category+factor to phases and sources'
+}
+
 Table projects {
   id CHAR [pk]
   title varchar [not null]
@@ -754,5 +785,8 @@ Ref: risk_category_assignment.risk_id > risk.risk_id
 Ref: risk_category_assignment.risk_category_id > risk_category.risk_category_id
 Ref: category_factor_link.risk_category_id > risk_category.risk_category_id
 Ref: category_factor_link.risk_factor_id > risk_factor.risk_factor_id
+Ref: risk_pattern.risk_category_id > risk_category.risk_category_id
+Ref: risk_pattern.risk_factor_id > risk_factor.risk_factor_id
 Ref: projects.public_authority_id > agency.id
 Ref: projects.project_type_id > project_type.id
+
