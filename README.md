@@ -1,62 +1,96 @@
-# PPP Intelligence Platform for Thailand Datastore API 
+# PPP Intelligence Platform — Backend API
+
+A RESTful API backend for the **Public-Private Partnership (PPP) Intelligence Platform for Thailand**, built with [FastAPI](https://fastapi.tiangolo.com/) and [SQLModel](https://sqlmodel.tiangolo.com/).
+
+This system aggregates, stores, and serves PPP project data following the [OC4IDS](https://standard.open-contracting.org/infrastructure/) (Open Contracting for Infrastructure Data Standard), along with comprehensive risk analysis capabilities.
+
+## Project Structure
+
+```
+backend/
+├── oc4ids_datastore_api/       # Main application package
+│   ├── main.py                 # FastAPI app initialization & middleware
+│   ├── controllers.py          # Route handlers (endpoints)
+│   ├── services.py             # Business logic layer
+│   ├── daos.py                 # Data Access Objects (database queries)
+│   ├── dtos.py                 # Response models (Pydantic DTOs)
+│   ├── models.py               # SQLModel ORM models
+│   ├── serializers.py          # OC4IDS data serialization
+│   ├── middleware.py           # Performance logging middleware
+│   ├── database.py             # Database engine setup
+│   ├── exceptions.py           # Custom exception handlers
+│   └── utils.py                # Utility functions
+├── scripts/                    # Data seeding & import scripts
+│   ├── seed_risk_factors.py    # Risk factor seed data
+│   ├── import_risk_pattern.py  # Risk pattern CSV importer
+│   └── import_data.py          # Project data JSON importer
+├── data/                       # Source data files
+│   ├── projects(1).json        # Sample project data
+│   └── *.csv                   # Risk pattern data (CSV)
+├── docs/                       # Documentation & schema files
+│   ├── DB_Design(5).sql        # Database design SQL
+│   ├── schema.dbml             # DBML schema definition
+│   └── example.json            # Example API response
+├── static/                     # Static files served by the API
+│   └── risk_source_references/ # Downloadable risk source documents
+├── tests/                      # Test suite
+├── init_refs.py                # Master seed script (runs all seeds)
+├── reset_db.py                 # Database reset utility
+├── Dockerfile
+├── docker-compose.yml
+├── pyproject.toml
+└── requirements.txt
+```
+
+## Prerequisites
+
+- Python 3.12+
+- PostgreSQL database
 
 ## Local Development
 
-### Prerequisites
+### 1. Set Up Virtual Environment
 
-- Python 3.12
-
-### Install Python requirements
-
-```
+```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements_dev.txt
 ```
 
-### Set database enrivonment variable
+### 2. Configure Database
 
-With a read-only user, set the path to the already existing database, which is created by [oc4ids-datastore-pipeline](https://github.com/OpenDataServices/oc4ids-datastore-pipeline).
+Create a `.env` file in the project root:
+
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+```
+
+### 3. Initialize Database
 
 ```bash
-export DATABASE_URL="postgresql://user:password@localhost/dbname"
+# Reset and create tables
+python reset_db.py
+
+# Seed all reference data (sectors, ministries, risk categories, risk patterns, etc.)
+python init_refs.py
 ```
 
-Alternatively, you can create a `.env` file in the root directory:
-```env
-DATABASE_URL=postgresql://user:password@localhost/dbname
-```
+### 4. Run the Development Server
 
-### Run app
-
-```
+```bash
 fastapi dev oc4ids_datastore_api/main.py
 ```
 
-### View the OpenAPI schema
-
-While the app is running, go to `http://127.0.0.1:8000/docs/`
-
-### Run linting and type checking
-
-```bash
-black oc4ids_datastore_api/ tests/
-isort oc4ids_datastore_api/ tests/
-flake8 oc4ids_datastore_api/ tests/
-mypy oc4ids_datastore_api/ tests/
-```
+The API will be available at `http://127.0.0.1:8000`  
+Interactive API docs (Swagger UI) at `http://127.0.0.1:8000/docs`
 
 ## Running with Docker
 
-You can use Docker Compose to run the API in a containerized environment.
+### 1. Configure Environment
 
-### 1. Database Configuration for Docker (Linux)
+Update your `.env` file with the database connection string.  
+On Linux, `network_mode: "host"` is used, so `localhost` connects directly to the host's database.
 
-By default on Linux, this project uses `network_mode: "host"` in `docker-compose.yml`. This allows the container to access the host's network directly.
-
-**This means you can use `localhost` to connect to your database**, exactly like in local development.
-
-Update your `.env` file:
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/dbname
 ```
@@ -74,30 +108,60 @@ The API will be available at `http://localhost:8000`.
 All endpoints are prefixed with `/api/v1`.
 
 ### Projects
-- `GET /api/v1/projects` - Get all projects with pagination and filters.
-  - Query params: `page`, `page_size`, `title`, `sector_id`, `ministry_id`, `year_from`, `year_to`.
-- `GET /api/v1/projects/{project_id}` - Get a single project by ID.
-- `POST /api/v1/projects` - Create a new project.
-- `PUT /api/v1/projects/{project_id}` - Update an existing project.
-- `DELETE /api/v1/projects/{project_id}` - Delete a project.
 
-### Tools & Analysis
-- `GET /api/v1/summary` - Get summary statistics for the dashboard.
-  - Supports filters by sector, ministry, agency, and date ranges.
-- `GET /api/v1/compare` - Compare multiple projects by IDs.
-  - Query param: `ids` (multiple).
-- `GET /api/v1/info` - Get reference data (sectors, ministries, etc.) for dropdowns.
-- `POST /api/v1/upload` - Upload project data via JSON or CSV files.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/projects` | List all projects (paginated, filterable) |
+| `GET` | `/projects/{project_id}` | Get project details by ID |
+| `POST` | `/projects` | Create a new project |
+| `PUT` | `/projects/{project_id}` | Update an existing project (full replacement) |
+| `DELETE` | `/projects/{project_id}` | Soft-delete a project |
 
-### Debug
-- `GET /api/debug/reset-db` - Resets the database schema (Warning: deletes all data).
+**Query Parameters** for `GET /projects`:
+`page`, `page_size`, `title`, `sector_id`, `ministry_id`, `concession_form_id`, `contract_type_id`, `risk_category_id`, `risk_factor_id`, `year_from`, `year_to`
 
-## Frontend Integration
+### Dashboard & Analysis
 
-The frontend is configured to connect to the backend API at `http://localhost:8000` by default. This can be overridden by setting the `NEXT_PUBLIC_API_URL` environment variable.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/summary` | Dashboard statistics with filter support |
+| `GET` | `/compare?ids=...&ids=...` | Compare multiple projects side by side |
+| `GET` | `/risk` | Risk analysis data (heatmaps, sector breakdowns) |
 
-If the backend is not available, the frontend will automatically fall back to the external S3 API.
+### Reference Data
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/info` | All lookup data for dropdowns (sectors, ministries, risk categories, etc.) |
+| `GET` | `/risk-sources/{rs_id}/reference` | Download a risk source reference file |
+
+### Upload
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/upload` | Import project data from JSON or CSV files |
+
+## Data Seeding
+
+The `init_refs.py` script handles all seed data in a single run:
+
+1. **Reference Data** — Sectors, Ministries, Contract Types, Project Types, Concession Forms, COFOG Classifications
+2. **Risk Data** — Risk Categories, Risk Factors, Category-Factor Links, Risk Phases
+3. **Risk Patterns** — Imported from CSV (source/phase bitmask mappings)
+
+```bash
+python init_refs.py
+```
+
+## Linting & Type Checking
+
+```bash
+black oc4ids_datastore_api/ tests/
+isort oc4ids_datastore_api/ tests/
+flake8 oc4ids_datastore_api/ tests/
+mypy oc4ids_datastore_api/ tests/
+```
 
 ## Releasing
 
-To publish a new version, raise a PR to `main` updating the version in `pyproject.toml`. Once merged, create a git tag and GitHub release for the new version, with naming `vX.Y.Z`. This will trigger a docker image to to be built and pushed, tagged with the version and `latest`.
+To publish a new version, raise a PR to `main` updating the version in `pyproject.toml`. Once merged, create a git tag and GitHub release with naming `vX.Y.Z`. This will trigger a Docker image to be built and pushed, tagged with the version and `latest`.

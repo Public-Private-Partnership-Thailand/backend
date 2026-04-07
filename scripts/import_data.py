@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 
 def import_data_direct():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    json_path = os.path.join(base_dir, 'projects(1).json')
+    json_path = os.path.join(base_dir, 'data', 'projects(1).json')
     try:
         with open(json_path, 'r') as f:
             data = json.load(f)

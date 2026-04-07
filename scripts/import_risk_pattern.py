@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 def import_risk_patterns():
     csv_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "data",
         "โครงการร่วมลงทุนระหว่างรัฐและเอกชนในประเทศไทย-260212.xlsx - Risk factor.csv"
     )
     
