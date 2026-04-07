@@ -654,8 +654,17 @@ class RiskFactorItem(BaseModel):
     value: str = Field(..., description="Factor name")
     description_th: Optional[str] = None
 
+class RiskSourceItem(BaseModel):
+    """A single risk source item with reference info"""
+    id: int = Field(..., description="Reference item ID")
+    value: Optional[str] = Field(None, description="Display value/meaning")
+    reference: Optional[str] = Field(None, description="Detailed text citation")
+    referenceFile: Optional[str] = Field(None, description="Downloadable file name")
+    referenceFileUrl: Optional[str] = Field(None, description="URL endpoint to download the file")
+    referenceUrl: Optional[str] = Field(None, description="External URL for the reference")
+
 # RiskSourceResponse is now a dynamic dictionary where keys are country names (e.g., 'global', 'thailand')
-RiskSourceResponse = Dict[str, List[ReferenceItem]]
+RiskSourceResponse = Dict[str, List[RiskSourceItem]]
 
 class ReferenceInfoResponse(BaseModel):
     """All reference/lookup data for dropdowns and filters"""
