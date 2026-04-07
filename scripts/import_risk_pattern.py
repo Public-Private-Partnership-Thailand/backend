@@ -53,14 +53,44 @@ def import_risk_patterns():
             logger.info("No risk sources found. Creating them...")
             source_data = [
                 # Global sources
-                {"rs_id": 1, "rs_id_from_bit_mask": 1, "meaning": "GI hub", "country": "global"},
-                {"rs_id": 2, "rs_id_from_bit_mask": 2, "meaning": "Yongjian Ke et al. (China)", "country": "global"},
-                {"rs_id": 3, "rs_id_from_bit_mask": 4, "meaning": "Sy Tien Do (Vietnam)", "country": "global"},
-                {"rs_id": 4, "rs_id_from_bit_mask": 8, "meaning": "Nur Alkaf Abd Karim (Malaysia)", "country": "global"},
+                {
+                    "rs_id": 1, "rs_id_from_bit_mask": 1, "meaning": "GI hub", "country": "global",
+                    "reference": "Global Infrastructure Hub. (n.d.). PPP Risk Allocation Tool. Retrieved April 1, 2026, from https://ppp-risk.gihub.org/",
+                    "reference_url": "https://ppp-risk.gihub.org/",
+                    "reference_file": None
+                },
+                {
+                    "rs_id": 2, "rs_id_from_bit_mask": 2, "meaning": "Yongjian Ke et al. (China)", "country": "global",
+                    "reference": "Ke, Y., Wang, S., Chan, A. P. C., & Lam, P. T. I. (2010). Preferred risk allocation in China’s public–private partnership (PPP) projects. International Journal of Project Management, 28, 482–492.",
+                    "reference_url": "https://doi.org/10.1016/j.ijproman.2009.08.007",
+                    "reference_file": "Preferred risk allocation in China’s public–private partnership (PPP) projects.pdf"
+                },
+                {
+                    "rs_id": 3, "rs_id_from_bit_mask": 4, "meaning": "Sy Tien Do (Vietnam)", "country": "global",
+                    "reference": "Do, S. T. (2015). A risk-based willingness model for strategic investment of the private sector in public-private partnership transportation infrastructure projects in Vietnam [Doctoral dissertation, Chulalongkorn University].",
+                    "reference_url": None,
+                    "reference_file": None
+                },
+                {
+                    "rs_id": 4, "rs_id_from_bit_mask": 8, "meaning": "Nur Alkaf Abd Karim (Malaysia)", "country": "global",
+                    "reference": "Abd Karim, N. A. (2011). Risk allocation in public-private partnership (PPP) project: A review on risk factors. International Journal of Sustainable Construction Engineering & Technology, 2(2), 8–16.",
+                    "reference_url": None,
+                    "reference_file": "RISK ALLOCATION IN PUBLIC-PRIVATE PARTNERSHIP (PPP) PROJECT A REVIEW ON RISK FACTORS.pdf"
+                },
                 # Thailand sources
-                {"rs_id": 5, "rs_id_from_bit_mask": 16, "meaning": "SEPO", "country": "thailand"},
-                # Thailand OTP (reports) - mapped to rs_id=6 for the bit mask
-                {"rs_id": 6, "rs_id_from_bit_mask": 32, "meaning": "รายงาน สนข.", "country": "thailand"},
+                {
+                    "rs_id": 5, "rs_id_from_bit_mask": 16, "meaning": "SEPO", "country": "thailand",
+                    "reference": "สำนักงานคณะกรรมการนโยบายรัฐวิสาหกิจ. (ม.ป.ป.). กรอบในการประเมินและจัดสรรความเสี่ยงและกำหนดผลตอบแทนในการร่วมลงทุนระหว่างรัฐและเอกชน: กิจการพัฒนาท่าเรือสาธารณะสำหรับขนส่งสินค้า. กระทรวงการคลัง",
+                    "reference_url": None,
+                    "reference_file": "กรอบในการประเมินและจัดสรรความเสี่ยงและกำหนดผลตอบแทนในการร่วมลงทุนระหว่างรัฐ.pdf"
+                },
+                # Thailand OTP (reports)
+                {
+                    "rs_id": 6, "rs_id_from_bit_mask": 32, "meaning": "รายงาน สนข.", "country": "thailand",
+                    "reference": "สำนักงานนโยบายและแผนการขนส่งและจราจร. (2566, มิถุนายน). ค่าจ้างศึกษาจัดการองค์ความรู้ในการพัฒนาโครงการให้เอกชนร่วมทุนในกิจการของรัฐด้านคมนาคมและโลจิสติกส์: รายงานฉบับสมบูรณ์ (Final Report).",
+                    "reference_url": None,
+                    "reference_file": "1. รายงานสรุปผู้บริหาร.pdf"
+                },
             ]
             for sd in source_data:
                 src = RiskSource(**sd)
