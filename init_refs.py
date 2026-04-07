@@ -408,6 +408,33 @@ def main():
         print(f"An error occurred during risk seeding: {e}")
         raise e
 
+    # Import risk patterns (from CSV)
+    try:
+        import importlib.util, os
+        script = os.path.join(os.path.dirname(__file__), "scripts", "import_risk_pattern.py")
+        spec = importlib.util.spec_from_file_location("import_risk_pattern", script)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        print("Importing Risk Patterns...")
+        mod.import_risk_patterns()
+        print("Risk patterns imported successfully.")
+    except Exception as e:
+        print(f"An error occurred during risk pattern import: {e}")
+        raise e
+
+    # Import project data
+    #try:
+    #    script = os.path.join(os.path.dirname(__file__), "scripts", "import_data.py")
+    #    spec = importlib.util.spec_from_file_location("import_data", script)
+    #    mod = importlib.util.module_from_spec(spec)
+    #    spec.loader.exec_module(mod)
+    #    print("Importing project data...")
+    #    mod.import_data_direct()
+    #    print("Project data imported successfully.")
+    #except Exception as e:
+    #    print(f"An error occurred during project data import: {e}")
+    #    raise e
+
 
 if __name__ == "__main__":
     main()

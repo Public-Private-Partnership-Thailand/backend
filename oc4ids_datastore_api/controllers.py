@@ -522,3 +522,51 @@ def get_risk(
     session: Session = Depends(get_session)
 ) -> Dict[str, Any]:
     return get_risk_analysis(session)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  GET /risk-sources/{rs_id}/reference — ดาวน์โหลดไฟล์ Reference ของ Risk Source
+# ──────────────────────────────────────────────────────────────────────────────
+@router.get(
+    "/risk-sources/{rs_id}/reference",
+    summary="ดาวน์โหลดไฟล์ reference ของ Risk Source",
+    description="""
+ดาวน์โหลดไฟล์เอกสารอ้างอิง (reference) ของแหล่งที่มาของความเสี่ยง (Risk Source) ตาม ID
+
+หากไม่พบไฟล์หรือ Risk Source ไม่มี reference จะคืน HTTP 404
+""",
+    response_description="ไฟล์ reference สำหรับดาวน์โหลด",
+    responses={
+        200: {"description": "สำเร็จ — ส่งไฟล์สำหรับดาวน์โหลด"},
+        404: {"description": "ไม่พบ Risk Source หรือไม่มีไฟล์ reference", "model": ErrorDetail},
+    },
+    tags=["Reference Data"],
+)
+def download_risk_source_reference(
+    rs_id: int = Path(..., description="ID ของ Risk Source"),
+    session: Session = Depends(get_session)
+):
+    import os
+    from fastapi.responses import FileResponse
+    from oc4ids_datastore_api.models import RiskSource
+
+    risk_source = session.get(RiskSource, rs_id)
+    if not risk_source:
+        raise HTTPException(status_code=404, detail=f"Risk Source ID {rs_id} not found")
+
+    if not risk_source.reference_file:
+        raise HTTPException(status_code=404, detail=f"Risk Source ID {rs_id} has no reference file")
+
+    # ไฟล์เก็บอยู่ใน static/risk_source_references/
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    file_path = os.path.join(base_dir, "static", "risk_source_references", risk_source.reference_file)
+
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail=f"Reference file not found on server: {risk_source.reference_file}")
+
+    return FileResponse(
+        path=file_path,
+        filename=risk_source.reference_file,
+        media_type="application/octet-stream",
+    )
+

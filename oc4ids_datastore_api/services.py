@@ -1385,7 +1385,14 @@ def get_reference_info(session: Session) -> Dict[str, Any]:
         ],
         "riskSource": {
             country: [
-                {"id": rs.rs_id, "value": rs.meaning}
+                {
+                    "id": rs.rs_id,
+                    "value": rs.meaning,
+                    "reference": rs.reference,
+                    "referenceFile": rs.reference_file,
+                    "referenceFileUrl": f"/api/v1/risk-sources/{rs.rs_id}/reference" if rs.reference_file else None,
+                    "referenceUrl": rs.reference_url,
+                }
                 for rs in risk_sources if rs.country == country
             ]
             for country in sorted(list(set(rs.country for rs in risk_sources if rs.country)))

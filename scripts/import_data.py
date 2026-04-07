@@ -15,8 +15,10 @@ from oc4ids_datastore_api.services import create_project_data
 logging.basicConfig(level=logging.INFO)
 
 def import_data_direct():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    json_path = os.path.join(base_dir, 'projects(1).json')
     try:
-        with open('projects(1).json', 'r') as f:
+        with open(json_path, 'r') as f:
             data = json.load(f)
     except FileNotFoundError:
         print("Error: projects(1).json not found.")

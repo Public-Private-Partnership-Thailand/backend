@@ -907,6 +907,9 @@ class RiskSource(SQLModel, table=True):
     rs_id_from_bit_mask: Optional[int] = None
     meaning: Optional[str] = None
     country: Optional[str] = None
+    reference: Optional[str] = None       # ข้อความอ้างอิง เช่น "Ke et al., 2010"
+    reference_file: Optional[str] = None  # ชื่อไฟล์สำหรับดาวน์โหลด เช่น "report.pdf"
+    reference_url: Optional[str] = None   # link ภายนอก เช่น URL ไปหา paper
 
 class RiskPhase(SQLModel, table=True):
     __tablename__ = "risk_phase"
