@@ -13,7 +13,7 @@ class OC4IDSUser(HttpUser):
     @task(3)
     def get_projects(self):
         """Task to get all projects."""
-        self.client.get("/api/v1/datasets?page=1&page_size=10")
+        self.client.get("/api/v1/projects?page=1&page_size=10")
 
     @task(1)
     def create_project(self):
@@ -24,7 +24,7 @@ class OC4IDSUser(HttpUser):
             "status": "active"
         }
         # post returns a Response object
-        with self.client.post("/api/v1/datasets", json=payload, catch_response=True) as response:
+        with self.client.post("/api/v1/projects", json=payload, catch_response=True) as response:
             if response.status_code == 200:
                 try:
                     data = response.json()
@@ -41,7 +41,7 @@ class OC4IDSUser(HttpUser):
         """Task to get a specific project."""
         if self.project_ids:
             project_id = random.choice(self.project_ids)
-            with self.client.get(f"/api/v1/datasets/{project_id}", catch_response=True) as response:
+            with self.client.get(f"/api/v1/projects/{project_id}", catch_response=True) as response:
                 if response.status_code == 404:
                     # If deleted or not found, remove from list to verify behavior later
                     if project_id in self.project_ids:

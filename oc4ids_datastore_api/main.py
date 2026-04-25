@@ -11,7 +11,7 @@ try:
 except ImportError:
     pass
 
-from oc4ids_datastore_api.controllers import router
+from oc4ids_datastore_api.routers import api_router as router
 from oc4ids_datastore_api.exceptions import validation_exception_handler, global_exception_handler
 from oc4ids_datastore_api.middleware import PerformanceMiddleware
 

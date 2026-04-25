@@ -8,9 +8,15 @@ from sqlmodel import SQLModel, Field
 from oc4ids_datastore_api.models import Project
 
 
-engine = create_engine(os.environ["DATABASE_URL"], echo=False)
-SQLModel.metadata.create_all(engine)
+engine = create_engine(os.environ.get("DATABASE_URL", "sqlite:///:memory:"), echo=False)
 
+def init_db():
+    try:
+        SQLModel.metadata.create_all(engine)
+    except Exception as e:
+        print("Warning: Could not create tables on startup", e)
+
+init_db()
 
 def get_engine() -> Engine:
     global _engine

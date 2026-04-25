@@ -23,7 +23,9 @@ backend/
 ├── scripts/                    # Data seeding & import scripts
 │   ├── seed_risk_factors.py    # Risk factor seed data
 │   ├── import_risk_pattern.py  # Risk pattern CSV importer
-│   └── import_data.py          # Project data JSON importer
+│   ├── import_data.py          # Project data JSON importer
+│   ├── init_refs.py            # Master seed script (runs all seeds)
+│   └── reset_db.py             # Database reset utility
 ├── data/                       # Source data files
 │   ├── projects(1).json        # Sample project data
 │   └── *.csv                   # Risk pattern data (CSV)
@@ -34,8 +36,6 @@ backend/
 ├── static/                     # Static files served by the API
 │   └── risk_source_references/ # Downloadable risk source documents
 ├── tests/                      # Test suite
-├── init_refs.py                # Master seed script (runs all seeds)
-├── reset_db.py                 # Database reset utility
 ├── Dockerfile
 ├── docker-compose.yml
 ├── pyproject.toml
@@ -69,10 +69,10 @@ DATABASE_URL=postgresql://user:password@localhost:5432/dbname
 
 ```bash
 # Reset and create tables
-python reset_db.py
+python scripts/reset_db.py
 
 # Seed all reference data (sectors, ministries, risk categories, risk patterns, etc.)
-python init_refs.py
+python scripts/init_refs.py
 ```
 
 ### 4. Run the Development Server
@@ -150,7 +150,7 @@ The `init_refs.py` script handles all seed data in a single run:
 3. **Risk Patterns** — Imported from CSV (source/phase bitmask mappings)
 
 ```bash
-python init_refs.py
+python scripts/init_refs.py
 ```
 
 ## Linting & Type Checking

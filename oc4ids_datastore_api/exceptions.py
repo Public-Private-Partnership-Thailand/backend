@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.requests import Request
-from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
+from starlette.status import HTTP_422_UNPROCESSABLE_CONTENT
 import logging
 
 # Define global exception handlers
@@ -11,7 +11,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     Override default validation error to provide a standard error format.
     """
     return JSONResponse(
-        status_code=HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=HTTP_422_UNPROCESSABLE_CONTENT,
         content={
             "status": "error",
             "code": "VALIDATION_ERROR",

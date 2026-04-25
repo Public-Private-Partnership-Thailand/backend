@@ -1,3 +1,5 @@
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -335,7 +337,7 @@ def init_risk_factors():
     """Delegates to the existing seed_risk_factors script."""
     print("Initializing Risk Factors...")
     import importlib.util, os
-    script = os.path.join(os.path.dirname(__file__), "scripts", "seed_risk_factors.py")
+    script = os.path.join(os.path.dirname(__file__), "seed_risk_factors.py")
     spec = importlib.util.spec_from_file_location("seed_risk_factors", script)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -411,7 +413,7 @@ def main():
     # Import risk patterns (from CSV)
     try:
         import importlib.util, os
-        script = os.path.join(os.path.dirname(__file__), "scripts", "import_risk_pattern.py")
+        script = os.path.join(os.path.dirname(__file__), "import_risk_pattern.py")
         spec = importlib.util.spec_from_file_location("import_risk_pattern", script)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)

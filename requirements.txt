@@ -104,5 +104,5 @@ watchfiles==1.0.4
     # via uvicorn
 websockets==14.2
     # via uvicorn
-libcoveoc4ids
-pandas
+libcoveoc4ids>=0.0.1
+pandas>=2.0.0
