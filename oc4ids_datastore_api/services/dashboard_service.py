@@ -141,6 +141,16 @@ def get_dashboard_summary(
     ]
     investment_by_year_list.sort(key=lambda x: x["year"])
 
+    # pieContractTypeCount mapping
+    pie_contract_counts = []
+    for ct in stats.get("contract_type_counts", []):
+        pie_contract_counts.append({
+            "id": ct["id"],
+            "name": ct["name"],
+            "fullName": ct["fullName"],
+            "count": ct["count"]
+        })
+
     return {
         "summary": {
             "totalProjects": stats["total_projects"],
@@ -161,4 +171,5 @@ def get_dashboard_summary(
         "sectorCounts": {k: v["total"]["count"] for k, v in sector_stats.items()},
         "countProjectGroupByPublicAuthority": stats.get("pa_stats", []),
         "sectorProjectValueBubble": stats.get("bubble_stats", []),
+        "pieContractTypeCount": pie_contract_counts,
     }

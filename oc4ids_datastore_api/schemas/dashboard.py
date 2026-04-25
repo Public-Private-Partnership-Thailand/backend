@@ -78,6 +78,14 @@ class SectorBubbleResponse(BaseModel):
     authorityCount: int
 
 
+class ContractTypeCountResponse(BaseModel):
+    """Summary of project counts by contract type for pie chart"""
+    id: int
+    name: str
+    fullName: str
+    count: int
+
+
 class DashboardSummaryResponse(BaseModel):
     """Complete dashboard summary response"""
     summary: SummaryStatsResponse
@@ -95,4 +103,7 @@ class DashboardSummaryResponse(BaseModel):
     )
     sectorProjectValueBubble: List[SectorBubbleResponse] = Field(
         ..., description="Project metrics per sector for bubble chart"
+    )
+    pieContractTypeCount: List[ContractTypeCountResponse] = Field(
+        ..., description="Project counts grouped by contract type"
     )

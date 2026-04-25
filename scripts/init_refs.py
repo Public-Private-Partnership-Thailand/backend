@@ -59,9 +59,9 @@ DATA = {
         {"id": 21, "value": "อื่น ๆ"}
     ],
     "contractType": [
-        {"id": 1, "value": "BTO"},
-        {"id": 2, "value": "BOT"},
-        {"id": 3, "value": "BTO/BOT"}
+        {"id": 1, "value": "BTO", "description": "Build-Transfer-Operate (BTO)"},
+        {"id": 2, "value": "BOT", "description": "Build-Operate-Transfer (BOT)"},
+        {"id": 3, "value": "Others", "description": "รูปแบบอื่น ๆ"}
     ],
     "projectType": [
         {"id": 1, "value": "ท่าเรือ"},
@@ -118,17 +118,22 @@ def init_contract_types(session):
     scheme = "รูปแบบการจัดสรรกรรมสิทธิ์"
     for item in DATA["contractType"]:
         val = item["value"]
+        desc = item["description"]
         obj = session.exec(select(AdditionalClassification).where(
             AdditionalClassification.scheme == scheme,
             AdditionalClassification.code == val
         )).first()
         if not obj:
-            # Using value as code and description
-            obj = AdditionalClassification(scheme=scheme, code=val, description=val)
+            obj = AdditionalClassification(scheme=scheme, code=val, description=desc)
             session.add(obj)
             print(f"Created Contract Type: {val}")
         else:
-            print(f"Contract Type exists: {val}")
+            if obj.description != desc:
+                obj.description = desc
+                session.add(obj)
+                print(f"Updated Contract Type: {val}")
+            else:
+                print(f"Contract Type exists: {val}")
 
 def init_project_types(session):
     print("Initializing Project Types...")

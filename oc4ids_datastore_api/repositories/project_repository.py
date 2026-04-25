@@ -491,6 +491,32 @@ class ProjectRepository:
             else:
                 bubble_map[s_code] = {"sector": s_code, "projectCount": row[1], "totalValue": float(row[2] or 0), "authorityCount": row[3]}
 
+        ContractTypeAlias = aliased(AdditionalClassification)
+        ProjectClassificationLinkAlias = aliased(ProjectAdditionalClassificationLink)
+        contract_type_results = self.session.exec(
+            select(
+                ContractTypeAlias.id,
+                ContractTypeAlias.code.label("name"),
+                ContractTypeAlias.description.label("fullName"),
+                func.count(func.distinct(Project.id)).label("count"),
+            )
+            .select_from(ContractTypeAlias)
+            .outerjoin(ProjectClassificationLinkAlias, ContractTypeAlias.id == ProjectClassificationLinkAlias.classification_id)
+            .outerjoin(Project, Project.id == ProjectClassificationLinkAlias.project_id)
+            .where(
+                ContractTypeAlias.scheme == "รูปแบบการจัดสรรกรรมสิทธิ์",
+                or_(
+                    Project.id.is_(None),
+                    Project.id.in_(select(filtered_project_ids.c.id))
+                )
+            )
+            .group_by(ContractTypeAlias.id, ContractTypeAlias.code, ContractTypeAlias.description)
+        ).all()
+        contract_types_list = [
+            {"id": row[0], "name": row[1], "fullName": row[2] or row[1], "count": row[3]}
+            for row in contract_type_results
+        ]
+
         return {
             "total_projects": total_projects,
             "total_investment": total_investment,
@@ -505,6 +531,7 @@ class ProjectRepository:
             "investment_by_year": investment_by_year,
             "pa_stats": pa_stats,
             "bubble_stats": list(bubble_map.values()),
+            "contract_type_counts": contract_types_list,
             "project_ids": [row for row in self.session.exec(select(filtered_project_ids)).all()],
         }
 
