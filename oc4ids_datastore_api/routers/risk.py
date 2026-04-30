@@ -1,9 +1,9 @@
 """Risk Analysis Router — Risk heatmap endpoints."""
 
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session
 
 from oc4ids_datastore_api.database import get_session
@@ -26,9 +26,13 @@ router = APIRouter()
 |-----|-------------|
 | `heatmapRiskPhase` | Risk Pattern จัดกลุ่มตาม Category Code และ Factor Name พร้อม Phase และ Source |
 | `sectorMinistryHeatmap` | จำนวนความเสี่ยงแยกตาม Sector และ Risk Category |
+| `riskSectorWithProject` | โครงการแยกตาม Sector พร้อมข้อมูลความเสี่ยง |
 """,
     response_description="ข้อมูลวิเคราะห์ความเสี่ยงทั้งหมด",
     responses={200: {"description": "สำเร็จ"}},
 )
-def get_risk(session: Session = Depends(get_session)) -> Dict[str, Any]:
-    return get_risk_analysis(session)
+def get_risk(
+    sector_id: Optional[List[int]] = Query(None, description="กรองตาม sector ID"),
+    session: Session = Depends(get_session)
+) -> Dict[str, Any]:
+    return get_risk_analysis(session, sector_ids=sector_id)

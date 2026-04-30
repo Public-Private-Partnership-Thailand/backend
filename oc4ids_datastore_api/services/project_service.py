@@ -596,23 +596,8 @@ def create_project_data(
     project_id_str = project_data["id"]
     logger.info(f"Creating project data for {project_id_str}")
 
-    # Validation
-    missing_fields = []
-    period_data = project_data.get("period", {})
-    if not period_data or (
-        not period_data.get("durationInDays")
-        and not (period_data.get("startDate") and period_data.get("endDate"))
-    ):
-        missing_fields.append("period")
-    if "publicAuthority" not in project_data or not project_data.get("publicAuthority", {}).get("name"):
-        missing_fields.append("publicAuthority")
-    has_private_party = any(
-        p.get("identifier", {}).get("legalName") for p in project_data.get("parties", [])
-    )
-    if not has_private_party:
-        missing_fields.append("privateParty")
-    if missing_fields:
-        raise HTTPException(status_code=400, detail=f"Missing mandatory fields: {', '.join(missing_fields)}")
+    # Validation (Relaxed by user request)
+    logger.info(f"Skipping strict validation for project {project_id_str}")
 
     # Build core project
     model_data = {k: project_data[k] for k in ["id", "title", "description", "status", "purpose"] if k in project_data}
@@ -633,8 +618,6 @@ def create_project_data(
                 session.add(agency)
                 session.flush()
             model_data["public_authority_id"] = agency.id
-        else:
-            raise HTTPException(status_code=400, detail="Public Authority exists but has no name.")
 
     db_project = Project(**model_data)
     session.add(db_project)

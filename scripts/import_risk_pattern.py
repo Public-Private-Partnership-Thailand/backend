@@ -79,7 +79,7 @@ def import_risk_patterns():
                 },
                 # Thailand sources
                 {
-                    "rs_id": 5, "rs_id_from_bit_mask": 16, "meaning": "SEPO", "country": "thailand",
+                    "rs_id": 5, "rs_id_from_bit_mask": 16, "meaning": "สคร.", "country": "thailand",
                     "reference": "สำนักงานคณะกรรมการนโยบายรัฐวิสาหกิจ. (ม.ป.ป.). กรอบในการประเมินและจัดสรรความเสี่ยงและกำหนดผลตอบแทนในการร่วมลงทุนระหว่างรัฐและเอกชน: กิจการพัฒนาท่าเรือสาธารณะสำหรับขนส่งสินค้า. กระทรวงการคลัง",
                     "reference_url": None,
                     "reference_file": "กรอบในการประเมินและจัดสรรความเสี่ยงและกำหนดผลตอบแทนในการร่วมลงทุนระหว่างรัฐ.pdf"

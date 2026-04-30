@@ -5,7 +5,7 @@ Builds the risk heatmap and sector/ministry matrix from the DB.
 """
 
 from collections import defaultdict
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 from sqlmodel import Session, select
 from sqlalchemy.orm import aliased
 from sqlalchemy import func
@@ -13,12 +13,12 @@ from sqlalchemy import func
 from oc4ids_datastore_api.models import (
     RiskCategory, RiskFactor, RiskPhase, RiskPattern, RiskSource,
     Risk, RiskCategoryAssignment, RiskFactorAssignment,
-    Sector, ProjectSectorLink, Project,
+    Sector, ProjectSectorLink, Project, Mitigation, Impact,
 )
 
 
-def get_risk_analysis(session: Session) -> Dict[str, Any]:
-    """Build risk analysis data: heatmapRiskPhase + sectorMinistryHeatmap."""
+def get_risk_analysis(session: Session, sector_ids: Optional[List[int]] = None) -> Dict[str, Any]:
+    """Build risk analysis data: heatmapRiskPhase + sectorMinistryHeatmap + riskSectorWithProject."""
 
     # ------------------------------------------------------------------ #
     # Load reference data
@@ -42,7 +42,7 @@ def get_risk_analysis(session: Session) -> Dict[str, Any]:
     RCAlias = aliased(RiskCategoryAssignment)
     RFAlias = aliased(RiskFactorAssignment)
 
-    otp_results = session.exec(
+    otp_stmt = (
         select(
             RCAlias.risk_category_id,
             RFAlias.risk_factor_id,
@@ -53,7 +53,14 @@ def get_risk_analysis(session: Session) -> Dict[str, Any]:
         .join(RFAlias, RiskAlias.risk_id == RFAlias.risk_id)
         .join(Project, RiskAlias.project_id == Project.id)
         .where(Project.deleted_at.is_(None))
-    ).all()
+    )
+
+    if sector_ids:
+        otp_stmt = otp_stmt.join(ProjectSectorLink, Project.id == ProjectSectorLink.project_id).where(
+            ProjectSectorLink.sector_id.in_(sector_ids)
+        )
+
+    otp_results = session.exec(otp_stmt).all()
 
     otp_map: dict = defaultdict(list)
     for cat_id, fac_id, p_id, p_title in otp_results:
@@ -90,16 +97,20 @@ def get_risk_analysis(session: Session) -> Dict[str, Any]:
     # ------------------------------------------------------------------ #
     # Build sectorMinistryHeatmap
     # ------------------------------------------------------------------ #
-    all_active_sectors = session.exec(select(Sector).where(Sector.is_active == True)).all()
+    sector_stmt = select(Sector).where(Sector.is_active == True)
+    if sector_ids:
+        sector_stmt = sector_stmt.where(Sector.id.in_(sector_ids))
+    all_active_sectors = session.exec(sector_stmt).all()
+    
     sector_codes = [s.code for s in all_active_sectors]
-    if "others" not in sector_codes:
+    if not sector_ids and "others" not in sector_codes:
         sector_codes.append("others")
 
     SectorAlias = aliased(Sector)
     RCAlias2 = aliased(RiskCategoryAssignment)
     RiskAlias2 = aliased(Risk)
 
-    sector_risk_results = session.exec(
+    sector_risk_stmt = (
         select(
             SectorAlias.code.label("sector"),
             RCAlias2.risk_category_id,
@@ -110,8 +121,13 @@ def get_risk_analysis(session: Session) -> Dict[str, Any]:
         .join(ProjectSectorLink, Project.id == ProjectSectorLink.project_id)
         .join(SectorAlias, ProjectSectorLink.sector_id == SectorAlias.id)
         .where(Project.deleted_at.is_(None))
-        .group_by(SectorAlias.code, RCAlias2.risk_category_id)
-    ).all()
+    )
+
+    if sector_ids:
+        sector_risk_stmt = sector_risk_stmt.where(SectorAlias.id.in_(sector_ids))
+
+    sector_risk_stmt = sector_risk_stmt.group_by(SectorAlias.code, RCAlias2.risk_category_id)
+    sector_risk_results = session.exec(sector_risk_stmt).all()
 
     sr_count = {(s_code, c_id): cnt for s_code, c_id, cnt in sector_risk_results}
 
@@ -126,4 +142,81 @@ def get_risk_analysis(session: Session) -> Dict[str, Any]:
         for s_code in sector_codes
     ]
 
-    return {"heatmapRiskPhase": heatmap, "sectorMinistryHeatmap": sector_ministry_heatmap}
+    # ------------------------------------------------------------------ #
+    # Build riskSectorWithProject
+    # ------------------------------------------------------------------ #
+    risk_project_stmt = (
+        select(
+            SectorAlias.code.label("sector"),
+            Project.id.label("projectId"),
+            Project.title.label("projectName"),
+            Risk.title.label("problem"),
+            Risk.phase.label("phase"),
+            Impact.description.label("riskImpact"),
+            Mitigation.action.label("riskResponse"),
+            RCAlias.risk_category_id,
+            RFAlias.risk_factor_id,
+        )
+        .join(ProjectSectorLink, Project.id == ProjectSectorLink.project_id)
+        .join(SectorAlias, ProjectSectorLink.sector_id == SectorAlias.id)
+        .join(Risk, Project.id == Risk.project_id)
+        .join(RCAlias, Risk.risk_id == RCAlias.risk_id)
+        .join(RFAlias, Risk.risk_id == RFAlias.risk_id)
+        .outerjoin(Impact, Risk.risk_id == Impact.risk_id)
+        .outerjoin(Mitigation, Risk.risk_id == Mitigation.risk_id)
+        .where(Project.deleted_at.is_(None))
+    )
+
+    if sector_ids:
+        risk_project_stmt = risk_project_stmt.where(SectorAlias.id.in_(sector_ids))
+
+    risk_project_results = session.exec(risk_project_stmt).all()
+
+    sector_grouped_projects: dict = defaultdict(list)
+    sector_risk_count: dict = defaultdict(int)
+
+    for row in risk_project_results:
+        s_code = row.sector
+        sector_grouped_projects[s_code].append({
+            "projectId": str(row.projectId),
+            "projectName": row.projectName,
+            "problem": row.problem,
+            "riskImpact": row.riskImpact,
+            "riskResponse": row.riskResponse,
+            "phase": row.phase,
+            "riskCategoryId": row.risk_category_id,
+            "riskFactorId": row.risk_factor_id,
+        })
+    
+    # Calculate riskCount per sector
+    sector_risk_count_stmt = (
+        select(
+            SectorAlias.code,
+            func.count(func.distinct(Risk.risk_id))
+        )
+        .join(ProjectSectorLink, Project.id == ProjectSectorLink.project_id)
+        .join(SectorAlias, ProjectSectorLink.sector_id == SectorAlias.id)
+        .join(Risk, Project.id == Risk.project_id)
+        .where(Project.deleted_at.is_(None))
+    )
+    if sector_ids:
+        sector_risk_count_stmt = sector_risk_count_stmt.where(SectorAlias.id.in_(sector_ids))
+    
+    sector_risk_count_stmt = sector_risk_count_stmt.group_by(SectorAlias.code)
+    sector_risk_count_results = session.exec(sector_risk_count_stmt).all()
+    sector_risk_count = {row[0]: row[1] for row in sector_risk_count_results}
+
+    risk_sector_with_project = [
+        {
+            "sector": s_code,
+            "riskCount": sector_risk_count.get(s_code, 0),
+            "projects": sector_grouped_projects.get(s_code, []),
+        }
+        for s_code in sector_codes
+    ]
+
+    return {
+        "heatmapRiskPhase": heatmap,
+        "sectorMinistryHeatmap": sector_ministry_heatmap,
+        "riskSectorWithProject": risk_sector_with_project,
+    }

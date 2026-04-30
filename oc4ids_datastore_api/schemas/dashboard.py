@@ -32,6 +32,7 @@ class LatestProjectResponse(BaseModel):
     status: Optional[str] = None
     type: Optional[str] = None
     updated: Optional[str] = None
+    date: Optional[str] = None
 
 
 class OtherMinistriesResponse(BaseModel):
@@ -54,6 +55,11 @@ class InvestmentByYearResponse(BaseModel):
     projectCount: int = Field(..., description="Number of projects in that year")
 
 
+class BusinessGroupProjectResponse(BaseModel):
+    id: str
+    projectName: str
+
+
 class BusinessGroupStatResponse(BaseModel):
     """Statistics grouped by business sector"""
     groupName: str
@@ -62,6 +68,7 @@ class BusinessGroupStatResponse(BaseModel):
     small: Optional[Dict[str, Any]] = None
     medium: Optional[Dict[str, Any]] = None
     big: Optional[Dict[str, Any]] = None
+    project: Optional[List[BusinessGroupProjectResponse]] = None
 
 
 class PublicAuthorityCountResponse(BaseModel):
@@ -107,3 +114,4 @@ class DashboardSummaryResponse(BaseModel):
     pieContractTypeCount: List[ContractTypeCountResponse] = Field(
         ..., description="Project counts grouped by contract type"
     )
+    locations: List[Dict[str, Any]] = Field(default_factory=list, description="Project locations for mapping")

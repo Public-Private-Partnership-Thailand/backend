@@ -72,8 +72,8 @@ def get_reference_info(session: Session) -> Dict[str, Any]:
                 {"id": 4, "value": "Nur Alkaf Abd Karim (Malaysia)"},
             ],
             "thailand": [
-                {"id": 1, "value": "SEPO"},
-                {"id": 2, "value": "รายงาน สนข."},
+                {"id": 5, "value": "สคร."},
+                {"id": 6, "value": "รายงาน สนข."},
             ],
         },
     }

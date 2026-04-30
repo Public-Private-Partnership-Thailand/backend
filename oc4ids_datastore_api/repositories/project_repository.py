@@ -69,6 +69,7 @@ class ProjectRepository:
         risk_factor_id: Optional[List[int]] = None,
         year_from: Optional[int] = None,
         year_to: Optional[int] = None,
+        order_by: Optional[str] = None,
     ):
         FilterLastPeriod = aliased(ProjectPeriod)
         FilterSectorLink = aliased(ProjectSectorLink)
@@ -138,6 +139,14 @@ class ProjectRepository:
             elif year_to:
                 id_query = id_query.where(func.extract("year", FilterLastPeriod.start_date) <= year_to)
 
+        if order_by == "start_date":
+            if not (year_from or year_to):
+                id_query = id_query.join(
+                    FilterLastPeriod,
+                    (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == "duration"),
+                )
+            id_query = id_query.order_by(FilterLastPeriod.start_date.desc())
+
         id_query = id_query.distinct().offset(skip).limit(limit)
         project_ids = self.session.exec(id_query).all()
 
@@ -178,6 +187,10 @@ class ProjectRepository:
             .join(ProjectPeriod, Project.id == ProjectPeriod.project_id, isouter=True)
             .group_by(Project.id, Project.title, Agency.name_en)
         )
+
+        if order_by == "start_date":
+            statement = statement.order_by(func.min(ProjectPeriod.start_date).desc())
+
         return self.session.exec(statement).all()
 
     def get_summaries(self, *args, **kwargs):
@@ -403,7 +416,7 @@ class ProjectRepository:
         all_active_sectors = self.session.exec(all_active_sectors_query).all()
         sector_stats = {
             s: {"total": {"count": 0, "investment": 0}, "small": {"count": 0, "investment": 0},
-                "medium": {"count": 0, "investment": 0}, "big": {"count": 0, "investment": 0}}
+                "medium": {"count": 0, "investment": 0}, "big": {"count": 0, "investment": 0}, "project": []}
             for s in all_active_sectors
         }
         for row in self.session.exec(sector_query).all():
@@ -412,7 +425,27 @@ class ProjectRepository:
                 "small": {"count": row[3] or 0, "investment": row[4] or 0},
                 "medium": {"count": row[5] or 0, "investment": row[6] or 0},
                 "big": {"count": row[7] or 0, "investment": row[8] or 0},
+                "project": []
             }
+        
+        # Populate project lists for sectors
+        sector_projects_query = (
+            select(
+                SectorAlias.name_en,
+                Project.id,
+                Project.title
+            )
+            .join(ProjectSectorLinkAlias, Project.id == ProjectSectorLinkAlias.project_id)
+            .join(SectorAlias, ProjectSectorLinkAlias.sector_id == SectorAlias.id)
+            .where(Project.id.in_(select(filtered_project_ids.c.id)))
+        )
+        for row in self.session.exec(sector_projects_query).all():
+            if row[0] in sector_stats:
+                sector_stats[row[0]]["project"].append({
+                    "id": str(row[1]),
+                    "projectName": row[2]
+                })
+        
 
         from datetime import date as date_cls
         today = date_cls.today()

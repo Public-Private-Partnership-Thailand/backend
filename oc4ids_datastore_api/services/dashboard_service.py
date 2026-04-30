@@ -44,7 +44,8 @@ def get_dashboard_summary(
 
     # 2. Get latest projects (small limit)
     latest_projects_results = dao.get_summaries(
-        limit=5,
+        limit=4,
+        order_by="start_date",
         title=search,
         sector_id=sector_id,
         ministry_id=ministry_id,
@@ -74,6 +75,12 @@ def get_dashboard_summary(
             elif isinstance(am_names, str):
                 p_ministries.extend([m.strip() for m in am_names.split(",") if m.strip()])
         p_ministries = list(set(p_ministries))
+        
+        # Get date from start_date
+        p_date = None
+        if hasattr(p, "start_date") and p.start_date:
+            p_date = p.start_date.isoformat() if hasattr(p.start_date, "isoformat") else str(p.start_date)
+
         latest_projects_data.append({
             "id": str(p.id),
             "title": p.title,
@@ -83,7 +90,56 @@ def get_dashboard_summary(
             "status": "implementation",
             "type": "PPP",
             "updated": datetime.utcnow().isoformat(),
+            "date": p_date,
         })
+
+    # 3. Get Locations
+    # We can fetch project details for the current filters that have locations
+    # For performance, we might want a dedicated query in DAO, but let's see if we can reuse
+    from oc4ids_datastore_api.models import Project, ProjectLocation, Sector, ProjectSectorLink, ProjectBudget
+    from sqlmodel import select
+
+    # We need project IDs that match the filters
+    project_ids = stats.get("project_ids", [])
+    locations_data = []
+    if project_ids:
+        # Fetch locations for these projects
+        loc_stmt = (
+            select(
+                ProjectLocation.project_id,
+                Project.title,
+                ProjectLocation.geometry_coordinates,
+                Sector.code.label("sector_code"),
+                ProjectBudget.total_amount,
+            )
+            .join(Project, ProjectLocation.project_id == Project.id)
+            .join(ProjectSectorLink, Project.id == ProjectSectorLink.project_id, isouter=True)
+            .join(Sector, ProjectSectorLink.sector_id == Sector.id, isouter=True)
+            .join(ProjectBudget, Project.id == ProjectBudget.project_id, isouter=True)
+            .where(ProjectLocation.project_id.in_(project_ids))
+        )
+        loc_results = session.exec(loc_stmt).all()
+        
+        # Avoid duplicates if project has multiple sectors or locations
+        seen_locs = set()
+        for p_id, p_title, geo, s_code, budget in loc_results:
+            if not geo or geo.get("type") != "Point" or not geo.get("coordinates"):
+                continue
+            
+            lng, lat = geo["coordinates"]
+            loc_key = (p_id, lat, lng)
+            if loc_key in seen_locs:
+                continue
+            seen_locs.add(loc_key)
+
+            locations_data.append({
+                "id": str(p_id),
+                "title": p_title,
+                "lat": lat,
+                "lng": lng,
+                "sector": s_code or "others",
+                "budgetMillionBaht": (budget / 1_000_000) if budget else None
+            })
 
     # Build ministerial stats lists
     ministry_counts = stats["ministry_counts"]
@@ -130,6 +186,7 @@ def get_dashboard_summary(
             "small": v["small"],
             "medium": v["medium"],
             "big": v["big"],
+            "project": v["project"],
         }
         for k, v in sector_stats.items()
     ]
@@ -172,4 +229,5 @@ def get_dashboard_summary(
         "countProjectGroupByPublicAuthority": stats.get("pa_stats", []),
         "sectorProjectValueBubble": stats.get("bubble_stats", []),
         "pieContractTypeCount": pie_contract_counts,
+        "locations": locations_data,
     }
