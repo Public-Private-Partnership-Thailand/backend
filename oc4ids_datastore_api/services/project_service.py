@@ -540,6 +540,7 @@ def get_all_projects(
         private_parties = []
         if getattr(row, "private_party_name", None):
             private_parties = [p.strip() for p in row.private_party_name.split(",") if p.strip()]
+        
         data.append({
             "id": str(row.id),
             "title": row.title,
@@ -641,14 +642,34 @@ def create_project_data(
     # Additional Classifications
     for ac in project_data.get("additionalClassifications", []):
         scheme = ac.get("scheme")
-        code = ac.get("id") or ac.get("code")
+        code = ac.get("id") or ac.get("code") or ac.get("description")
         if not scheme or not code:
             continue
-        ac_obj = _get_or_create_ref(session, AdditionalClassification, "code", code, {"scheme": scheme, "description": ac.get("description")})
-        if ac_obj.scheme != scheme:
-            ac_obj.scheme = scheme
+
+        # Find classification by both scheme and code to prevent overwriting
+        ac_stmt = select(AdditionalClassification).where(
+            AdditionalClassification.scheme == scheme,
+            AdditionalClassification.code == code
+        )
+        ac_obj = session.exec(ac_stmt).first()
+
+        if not ac_obj:
+            ac_obj = AdditionalClassification(
+                scheme=scheme,
+                code=code,
+                description=ac.get("description")
+            )
             session.add(ac_obj)
-        db_project.additional_classifications.append(ac_obj)
+            session.flush()
+            session.refresh(ac_obj)
+        else:
+            # Update description if it changed
+            if ac.get("description") and ac_obj.description != ac.get("description"):
+                ac_obj.description = ac.get("description")
+                session.add(ac_obj)
+
+        if ac_obj not in db_project.additional_classifications:
+            db_project.additional_classifications.append(ac_obj)
 
     # Locations
     for loc in project_data.get("locations", []):

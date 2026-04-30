@@ -8,7 +8,7 @@ Repository pattern nomenclature.
 
 from typing import List, Optional
 import uuid
-from sqlmodel import Session, select, func, or_
+from sqlmodel import Session, select, func, or_, distinct
 from sqlalchemy.orm import aliased
 
 from oc4ids_datastore_api.models import (
@@ -164,11 +164,11 @@ class ProjectRepository:
                 func.string_agg(Ministry.name_en.distinct(), ", ").label("party_ministry_names"),
                 func.string_agg(PartyAgency.name_en.distinct(), ", ").label("private_party_name"),
                 func.array_agg(Sector.name_en.distinct()).label("sector_names"),
-                func.array_agg(AdditionalClassification.description.distinct()).filter(
-                    AdditionalClassification.scheme == "รูปแบบสัมปทานหรือค่าตอบแทน"
+                func.array_agg(distinct(AdditionalClassification.description)).filter(
+                    func.trim(AdditionalClassification.scheme) == "รูปแบบสัมปทานหรือค่าตอบแทน"
                 ).label("concession_names"),
-                func.array_agg(AdditionalClassification.description.distinct()).filter(
-                    AdditionalClassification.scheme == "รูปแบบการจัดสรรกรรมสิทธิ์"
+                func.array_agg(distinct(AdditionalClassification.description)).filter(
+                    func.trim(AdditionalClassification.scheme) == "รูปแบบการจัดสรรกรรมสิทธิ์"
                 ).label("contract_type_names"),
                 func.min(ProjectPeriod.start_date).label("start_date"),
                 func.sum(ProjectBudget.total_amount).label("budget_amount"),
@@ -537,7 +537,7 @@ class ProjectRepository:
             .outerjoin(ProjectClassificationLinkAlias, ContractTypeAlias.id == ProjectClassificationLinkAlias.classification_id)
             .outerjoin(Project, Project.id == ProjectClassificationLinkAlias.project_id)
             .where(
-                ContractTypeAlias.scheme == "รูปแบบการจัดสรรกรรมสิทธิ์",
+                func.trim(ContractTypeAlias.scheme) == "รูปแบบการจัดสรรกรรมสิทธิ์",
                 or_(
                     Project.id.is_(None),
                     Project.id.in_(select(filtered_project_ids.c.id))
