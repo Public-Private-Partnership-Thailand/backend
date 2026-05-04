@@ -48,38 +48,40 @@ async def upload_file(
     file: UploadFile = File(..., description="ไฟล์ JSON หรือ CSV ที่ต้องการ import"),
     session: Session = Depends(get_session),
 ):
-    filename = file.filename
-    ext = filename.split(".")[-1].lower()
+    filename = file.filename or ""
+    if "." not in filename:
+        raise HTTPException(status_code=400, detail="File has no extension")
+    ext = filename.rsplit(".", 1)[-1].lower()
 
-    try:
-        if ext == "json":
-            contents = await file.read()
+    if ext == "json":
+        contents = await file.read()
+        try:
             data = json.loads(contents)
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}")
 
-            # Handle OC4IDS Package format
-            if "projects" in data and isinstance(data["projects"], list):
-                results = []
-                for p_data in data["projects"]:
-                    try:
-                        res = create_project_data(p_data, session)
-                        results.append(res)
-                    except Exception as e:
-                        results.append({"error": str(e), "project_title": p_data.get("title")})
-                has_errors = any("error" in r for r in results)
-                all_errors = has_errors and all("error" in r for r in results)
-                status = "error" if all_errors else ("partial_success" if has_errors else "success")
-                return {"status": status, "results": results}
+        if "projects" in data and isinstance(data["projects"], list):
+            results = []
+            for p_data in data["projects"]:
+                try:
+                    res = create_project_data(p_data, session)
+                    results.append(res)
+                except Exception as e:
+                    logger.exception("Failed to import project: %s", p_data.get("title"))
+                    results.append({"error": str(e), "project_title": p_data.get("title")})
+            has_errors = any("error" in r for r in results)
+            all_errors = has_errors and all("error" in r for r in results)
+            status = "error" if all_errors else ("partial_success" if has_errors else "success")
+            return {"status": status, "results": results}
 
-            # Single project
-            return create_project_data(data, session)
+        return create_project_data(data, session)
 
-        elif ext == "csv":
-            contents = await file.read()
+    if ext == "csv":
+        contents = await file.read()
+        try:
             df = pd.read_csv(BytesIO(contents))
-            return {"status": "success", "data": df.to_dict(orient="records")}
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid CSV: {e}")
+        return {"status": "success", "data": df.to_dict(orient="records")}
 
-        else:
-            raise HTTPException(status_code=400, detail="Unsupported file type")
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    raise HTTPException(status_code=400, detail="Unsupported file type")

@@ -87,8 +87,8 @@ def get_dashboard_summary(
             "ministry": p_ministries,
             "public_authority": p.agency_name,
             "budget": {"amount": getattr(p, "budget_amount", 0) or 0},
-            "status": "implementation",
-            "type": "PPP",
+            "status": getattr(p, "status", None),
+            "type": getattr(p, "project_type_name", None),
             "updated": datetime.utcnow().isoformat(),
             "date": p_date,
         })

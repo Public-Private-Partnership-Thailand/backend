@@ -17,6 +17,7 @@ from oc4ids_datastore_api.models import (
     ProjectAdditionalClassificationLink, ProjectBudget,
     Risk, RiskCategoryAssignment, RiskFactorAssignment,
 )
+from oc4ids_datastore_api.models.reference import ProjectType
 
 # Keep the old name as an alias for backward compatibility
 ProjectDAO = None  # set at bottom of file
@@ -128,6 +129,9 @@ class ProjectRepository:
                 )
             )
 
+        if agency_id:
+            id_query = id_query.where(Project.public_authority_id.in_(agency_id))
+
         if concession_form_id:
             resolved = self._resolve_concession_ids(concession_form_id)
             id_query = id_query.join(FilterLinkConcession, Project.id == FilterLinkConcession.project_id)
@@ -138,22 +142,17 @@ class ProjectRepository:
             id_query = id_query.join(FilterLinkContract, Project.id == FilterLinkContract.project_id)
             id_query = id_query.where(FilterLinkContract.classification_id.in_(contract_type_id))
 
-        if risk_category_id:
-            FilterRiskForCat = aliased(Risk)
-            FilterRiskCatAssign = aliased(RiskCategoryAssignment)
-            id_query = id_query.join(FilterRiskForCat, Project.id == FilterRiskForCat.project_id)
-            id_query = id_query.join(FilterRiskCatAssign, FilterRiskForCat.risk_id == FilterRiskCatAssign.risk_id)
-            id_query = id_query.where(FilterRiskCatAssign.risk_category_id.in_(risk_category_id))
-
-        if risk_factor_id:
-            FilterRiskForFactor = aliased(Risk)
-            FilterRiskFactorAssign = aliased(RiskFactorAssignment)
-            if not risk_category_id:
-                id_query = id_query.join(FilterRiskForFactor, Project.id == FilterRiskForFactor.project_id)
-            else:
-                FilterRiskForFactor = FilterRiskForCat  # noqa: F821 — reuse alias
-            id_query = id_query.join(FilterRiskFactorAssign, FilterRiskForFactor.risk_id == FilterRiskFactorAssign.risk_id)
-            id_query = id_query.where(FilterRiskFactorAssign.risk_factor_id.in_(risk_factor_id))
+        if risk_category_id or risk_factor_id:
+            FilterRisk = aliased(Risk)
+            id_query = id_query.join(FilterRisk, Project.id == FilterRisk.project_id)
+            if risk_category_id:
+                FilterRiskCatAssign = aliased(RiskCategoryAssignment)
+                id_query = id_query.join(FilterRiskCatAssign, FilterRisk.risk_id == FilterRiskCatAssign.risk_id)
+                id_query = id_query.where(FilterRiskCatAssign.risk_category_id.in_(risk_category_id))
+            if risk_factor_id:
+                FilterRiskFactorAssign = aliased(RiskFactorAssignment)
+                id_query = id_query.join(FilterRiskFactorAssign, FilterRisk.risk_id == FilterRiskFactorAssign.risk_id)
+                id_query = id_query.where(FilterRiskFactorAssign.risk_factor_id.in_(risk_factor_id))
 
         if year_from or year_to:
             id_query = id_query.join(
@@ -213,6 +212,8 @@ class ProjectRepository:
             select(
                 Project.id,
                 Project.title,
+                Project.status.label("status"),
+                ProjectType.name_th.label("project_type_name"),
                 Agency.name_en.label("agency_name"),
                 func.string_agg(Ministry.name_en.distinct(), ", ").label("party_ministry_names"),
                 func.string_agg(PartyAgency.name_en.distinct(), ", ").label("private_party_name"),
@@ -228,6 +229,7 @@ class ProjectRepository:
             )
             .filter(Project.id.in_(project_ids))
             .join(Agency, Project.public_authority_id == Agency.id, isouter=True)
+            .join(ProjectType, Project.project_type_id == ProjectType.id, isouter=True)
             .join(ProjectBudget, Project.id == ProjectBudget.project_id, isouter=True)
             .join(ProjectParty, Project.id == ProjectParty.project_id, isouter=True)
             .join(PartyAdditionalIdentifier, ProjectParty.id == PartyAdditionalIdentifier.party_id, isouter=True)
@@ -238,7 +240,7 @@ class ProjectRepository:
             .join(ProjectAdditionalClassificationLink, Project.id == ProjectAdditionalClassificationLink.project_id, isouter=True)
             .join(AdditionalClassification, ProjectAdditionalClassificationLink.classification_id == AdditionalClassification.id, isouter=True)
             .join(ProjectPeriod, Project.id == ProjectPeriod.project_id, isouter=True)
-            .group_by(Project.id, Project.title, Agency.name_en)
+            .group_by(Project.id, Project.title, Project.status, ProjectType.name_th, Agency.name_en)
         )
 
         if order_by == "start_date":
@@ -330,6 +332,8 @@ class ProjectRepository:
                     FilterAgency.ministry_id.in_(ministry_id),
                 )
             )
+        if agency_id:
+            id_query = id_query.where(Project.public_authority_id.in_(agency_id))
         if concession_form_id:
             resolved = self._resolve_concession_ids(concession_form_id)
             id_query = id_query.join(FilterLinkConcession, Project.id == FilterLinkConcession.project_id)
@@ -338,21 +342,17 @@ class ProjectRepository:
             FilterLinkContract = aliased(ProjectAdditionalClassificationLink)
             id_query = id_query.join(FilterLinkContract, Project.id == FilterLinkContract.project_id)
             id_query = id_query.where(FilterLinkContract.classification_id.in_(contract_type_id))
-        if risk_category_id:
-            FilterRiskForCat = aliased(Risk)
-            FilterRiskCatAssign = aliased(RiskCategoryAssignment)
-            id_query = id_query.join(FilterRiskForCat, Project.id == FilterRiskForCat.project_id)
-            id_query = id_query.join(FilterRiskCatAssign, FilterRiskForCat.risk_id == FilterRiskCatAssign.risk_id)
-            id_query = id_query.where(FilterRiskCatAssign.risk_category_id.in_(risk_category_id))
-        if risk_factor_id:
-            FilterRiskForFactor = aliased(Risk)
-            FilterRiskFactorAssign = aliased(RiskFactorAssignment)
-            if not risk_category_id:
-                id_query = id_query.join(FilterRiskForFactor, Project.id == FilterRiskForFactor.project_id)
-            else:
-                FilterRiskForFactor = FilterRiskForCat  # noqa: F821
-            id_query = id_query.join(FilterRiskFactorAssign, FilterRiskForFactor.risk_id == FilterRiskFactorAssign.risk_id)
-            id_query = id_query.where(FilterRiskFactorAssign.risk_factor_id.in_(risk_factor_id))
+        if risk_category_id or risk_factor_id:
+            FilterRisk = aliased(Risk)
+            id_query = id_query.join(FilterRisk, Project.id == FilterRisk.project_id)
+            if risk_category_id:
+                FilterRiskCatAssign = aliased(RiskCategoryAssignment)
+                id_query = id_query.join(FilterRiskCatAssign, FilterRisk.risk_id == FilterRiskCatAssign.risk_id)
+                id_query = id_query.where(FilterRiskCatAssign.risk_category_id.in_(risk_category_id))
+            if risk_factor_id:
+                FilterRiskFactorAssign = aliased(RiskFactorAssignment)
+                id_query = id_query.join(FilterRiskFactorAssign, FilterRisk.risk_id == FilterRiskFactorAssign.risk_id)
+                id_query = id_query.where(FilterRiskFactorAssign.risk_factor_id.in_(risk_factor_id))
         if year_from or year_to:
             id_query = id_query.join(
                 FilterLastPeriod,

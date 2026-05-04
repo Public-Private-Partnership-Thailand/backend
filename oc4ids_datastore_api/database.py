@@ -1,11 +1,6 @@
 import os
-from typing import Sequence
 
-from sqlalchemy import Engine
-from sqlmodel import Session, create_engine, select
-from sqlmodel import SQLModel, Field
-
-from oc4ids_datastore_api.models import Project
+from sqlmodel import Session, SQLModel, create_engine
 
 
 engine = create_engine(os.environ.get("DATABASE_URL", "sqlite:///:memory:"), echo=False)
@@ -18,11 +13,6 @@ def init_db():
 
 init_db()
 
-def get_engine() -> Engine:
-    global _engine
-    if _engine is None:
-        _engine = create_engine(os.environ["DATABASE_URL"])
-    return _engine
 
 def get_session():
     with Session(engine) as session:
