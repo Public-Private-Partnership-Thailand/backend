@@ -28,6 +28,7 @@ class LatestProjectResponse(BaseModel):
     title: Optional[str] = None
     ministry: Optional[List[str]] = None
     public_authority: Optional[str] = None
+    private_parties: Optional[List[str]] = None
     budget: Optional[Dict[str, Any]] = None
     status: Optional[str] = None
     type: Optional[str] = None
