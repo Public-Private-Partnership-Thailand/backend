@@ -13,7 +13,7 @@ except ImportError:
 
 from oc4ids_datastore_api.routers import api_router as router
 from oc4ids_datastore_api.exceptions import validation_exception_handler, global_exception_handler
-from oc4ids_datastore_api.middleware import PerformanceMiddleware
+from oc4ids_datastore_api.middleware import PerformanceMiddleware, StripTrailingSlashMiddleware
 
 # ──────────────────────────────────────────────────────────────────────────────
 #  OpenAPI Tags Metadata
@@ -88,6 +88,7 @@ app.add_exception_handler(Exception, global_exception_handler)
 
 # Add Middleware
 app.add_middleware(PerformanceMiddleware)
+app.add_middleware(StripTrailingSlashMiddleware)
 
 
 # Setup logging

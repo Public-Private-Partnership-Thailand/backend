@@ -6,6 +6,20 @@ from starlette.responses import Response
 
 logger = logging.getLogger(__name__)
 
+
+class StripTrailingSlashMiddleware(BaseHTTPMiddleware):
+    """Rewrite paths like /api/v1/projects/ → /api/v1/projects internally.
+    No redirect is issued, so there is no HTTP/HTTPS location-header problem."""
+    async def dispatch(self, request: Request, call_next) -> Response:
+        path = request.scope["path"]
+        if path != "/" and path.endswith("/"):
+            request.scope["path"] = path.rstrip("/")
+            raw = request.scope.get("raw_path", b"")
+            if raw:
+                request.scope["raw_path"] = raw.rstrip(b"/")
+        return await call_next(request)
+
+
 class PerformanceMiddleware(BaseHTTPMiddleware):
     """
     Middleware to calculate and log the processing time of each request.
