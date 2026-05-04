@@ -81,11 +81,17 @@ def get_dashboard_summary(
         if hasattr(p, "start_date") and p.start_date:
             p_date = p.start_date.isoformat() if hasattr(p.start_date, "isoformat") else str(p.start_date)
 
+        private_parties = []
+        private_party_name = getattr(p, "private_party_name", None)
+        if private_party_name:
+            private_parties = [name.strip() for name in private_party_name.split(",") if name.strip()]
+
         latest_projects_data.append({
             "id": str(p.id),
             "title": p.title,
             "ministry": p_ministries,
             "public_authority": p.agency_name,
+            "private_parties": private_parties,
             "budget": {"amount": getattr(p, "budget_amount", 0) or 0},
             "status": getattr(p, "status", None),
             "type": getattr(p, "project_type_name", None),
@@ -199,14 +205,26 @@ def get_dashboard_summary(
     investment_by_year_list.sort(key=lambda x: x["year"])
 
     # pieContractTypeCount mapping
+    # "Others" entry uses computed count (projects with no contract type at all).
+    # Named entries are only included when count > 0.
+    others_count = stats.get("others_contract_count", 0)
     pie_contract_counts = []
     for ct in stats.get("contract_type_counts", []):
-        pie_contract_counts.append({
-            "id": ct["id"],
-            "name": ct["name"],
-            "fullName": ct["fullName"],
-            "count": ct["count"]
-        })
+        if ct["name"] == "Others":
+            if others_count > 0:
+                pie_contract_counts.append({
+                    "id": ct["id"],
+                    "name": ct["name"],
+                    "fullName": ct["fullName"],
+                    "count": others_count,
+                })
+        elif ct["count"] > 0:
+            pie_contract_counts.append({
+                "id": ct["id"],
+                "name": ct["name"],
+                "fullName": ct["fullName"],
+                "count": ct["count"],
+            })
 
     return {
         "summary": {

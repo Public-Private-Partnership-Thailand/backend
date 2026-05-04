@@ -35,7 +35,7 @@ router = APIRouter()
 #  GET /projects — รายการโครงการทั้งหมด (Paginated)
 # ──────────────────────────────────────────────────────────────────────────────
 @router.get(
-    "/",
+    "",
     response_model=ProjectListResponse,
     summary="ดึงรายการโครงการทั้งหมด",
     description="""
@@ -129,7 +129,7 @@ def read_project(
 #  POST /projects — สร้างโครงการใหม่
 # ──────────────────────────────────────────────────────────────────────────────
 @router.post(
-    "/",
+    "",
     response_model=CreateProjectResponse,
     status_code=200,
     summary="สร้างโครงการใหม่",

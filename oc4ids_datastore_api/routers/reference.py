@@ -65,7 +65,7 @@ def download_risk_source_reference(
     if not risk_source.reference_file:
         raise HTTPException(status_code=404, detail=f"Risk Source ID {rs_id} has no reference file")
 
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     file_path = os.path.join(base_dir, "static", "risk_source_references", risk_source.reference_file)
 
     if not os.path.isfile(file_path):

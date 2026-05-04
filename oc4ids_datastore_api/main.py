@@ -44,6 +44,7 @@ tags_metadata = [
 app = FastAPI(
     title="PPP Intelligence Platform for Thailand Datastore API ",
     version="1.0.0",
+    redirect_slashes=False,
     description="""
 ## OC4IDS Datastore API
 

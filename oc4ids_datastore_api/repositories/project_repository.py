@@ -173,31 +173,25 @@ class ProjectRepository:
                     FilterLastPeriod,
                     (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == "duration"),
                 )
-            # Add start_date to select so ORDER BY is valid with DISTINCT,
-            # then wrap as subquery to return only project ids.
-            id_query = (
-                select(Project.id)
-                .select_from(
-                    id_query.add_columns(FilterLastPeriod.start_date)
-                    .distinct()
-                    .order_by(FilterLastPeriod.start_date.desc())
-                    .offset(skip)
-                    .limit(limit)
-                    .subquery()
-                )
+            subq = (
+                id_query.add_columns(FilterLastPeriod.start_date)
+                .distinct()
+                .order_by(FilterLastPeriod.start_date.desc())
+                .offset(skip)
+                .limit(limit)
+                .subquery()
             )
+            id_query = select(subq.c.id)
         elif order_by == "title":
-            id_query = (
-                select(Project.id)
-                .select_from(
-                    id_query.add_columns(Project.title)
-                    .distinct()
-                    .order_by(Project.title.asc())
-                    .offset(skip)
-                    .limit(limit)
-                    .subquery()
-                )
+            subq = (
+                id_query.add_columns(Project.title)
+                .distinct()
+                .order_by(Project.title.asc())
+                .offset(skip)
+                .limit(limit)
+                .subquery()
             )
+            id_query = select(subq.c.id)
         else:
             id_query = id_query.distinct().offset(skip).limit(limit)
         project_ids = self.session.exec(id_query).all()
@@ -606,6 +600,22 @@ class ProjectRepository:
             for row in contract_type_results
         ]
 
+        # Count projects that have at least one contract type classification.
+        # Projects with none are the true "Others".
+        ContractTypeAliasOthers = aliased(AdditionalClassification)
+        ProjectClassificationLinkAliasOthers = aliased(ProjectAdditionalClassificationLink)
+        classified_project_count = self.session.exec(
+            select(func.count(func.distinct(Project.id)))
+            .select_from(Project)
+            .join(ProjectClassificationLinkAliasOthers, Project.id == ProjectClassificationLinkAliasOthers.project_id)
+            .join(ContractTypeAliasOthers, ProjectClassificationLinkAliasOthers.classification_id == ContractTypeAliasOthers.id)
+            .where(
+                func.trim(ContractTypeAliasOthers.scheme) == "รูปแบบการจัดสรรกรรมสิทธิ์",
+                Project.id.in_(select(filtered_project_ids.c.id))
+            )
+        ).one() or 0
+        others_contract_count = total_projects - classified_project_count
+
         return {
             "total_projects": total_projects,
             "total_investment": total_investment,
@@ -621,6 +631,7 @@ class ProjectRepository:
             "pa_stats": pa_stats,
             "bubble_stats": list(bubble_map.values()),
             "contract_type_counts": contract_types_list,
+            "others_contract_count": others_contract_count,
             "project_ids": [row for row in self.session.exec(select(filtered_project_ids)).all()],
         }
 
