@@ -20,7 +20,7 @@ class ReferenceRepository:
 
     def get_sectors(self) -> List[Sector]:
         return self.session.exec(
-            select(Sector).where(Sector.is_active == True, Sector.parent_id.is_not(None))
+            select(Sector).where(Sector.is_active == True, Sector.code.contains("."))
         ).all()
 
     def get_ministries(self) -> List[Ministry]:
