@@ -19,7 +19,9 @@ class ReferenceRepository:
         self.session = session
 
     def get_sectors(self) -> List[Sector]:
-        return self.session.exec(select(Sector).where(Sector.is_active == True)).all()
+        return self.session.exec(
+            select(Sector).where(Sector.is_active == True, Sector.parent_id.is_not(None))
+        ).all()
 
     def get_ministries(self) -> List[Ministry]:
         return self.session.exec(select(Ministry)).all()

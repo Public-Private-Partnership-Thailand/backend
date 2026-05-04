@@ -521,15 +521,19 @@ def get_all_projects(
     risk_factor_id: Optional[List[int]] = None,
     year_from: Optional[int] = None,
     year_to: Optional[int] = None,
+    sort_by: Optional[str] = "period",
 ) -> Dict[str, Any]:
     repo = ProjectRepository(session)
     skip = (page - 1) * page_size
+    # map public param names to internal order_by values
+    order_by = "start_date" if sort_by == "period" else sort_by
     results = repo.get_projects(
         skip=skip, limit=page_size, title=title,
         sector_id=sector_id, ministry_id=ministry_id,
         concession_form_id=concession_form_id, contract_type_id=contract_type_id,
         risk_category_id=risk_category_id, risk_factor_id=risk_factor_id,
         year_from=year_from, year_to=year_to,
+        order_by=order_by,
     )
     total = repo.count()
     data = []

@@ -10,6 +10,21 @@ from sqlmodel import Session
 from oc4ids_datastore_api.repositories.reference_repository import ReferenceRepository
 
 
+_PPP_CANONICAL = {"PPP Net Cost", "PPP Gross Cost"}
+CONCESSION_OTHER_SENTINEL = 0
+
+
+def _build_concession_form_options(all_forms) -> list:
+    """Return only canonical PPP options + a single 'อื่น ๆ' sentinel."""
+    result = [
+        {"id": cf.id, "value": cf.description or cf.code}
+        for cf in all_forms
+        if (cf.description or cf.code) in _PPP_CANONICAL
+    ]
+    result.append({"id": CONCESSION_OTHER_SENTINEL, "value": "อื่น ๆ"})
+    return result
+
+
 def get_reference_info(session: Session) -> Dict[str, Any]:
     """Fetch all reference/lookup data for dropdowns and filters."""
     dao = ReferenceRepository(session)
@@ -28,7 +43,7 @@ def get_reference_info(session: Session) -> Dict[str, Any]:
         "sector": [{"id": s.id, "value": s.code} for s in sectors],
         "ministry": [{"id": m.id, "value": m.name_th} for m in ministries],
         "projectType": [{"id": pt.id, "value": pt.name_th or pt.name_en or pt.code} for pt in project_types],
-        "concessionForm": [{"id": cf.id, "value": cf.description or cf.code} for cf in concession_forms],
+        "concessionForm": _build_concession_form_options(concession_forms),
         "contractType": [{"id": ct.id, "value": ct.description or ct.code} for ct in contract_types],
         "riskCategory": [
             {

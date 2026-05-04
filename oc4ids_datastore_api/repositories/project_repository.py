@@ -22,9 +22,37 @@ from oc4ids_datastore_api.models import (
 ProjectDAO = None  # set at bottom of file
 
 
+_PPP_CANONICAL = {"PPP Net Cost", "PPP Gross Cost"}
+_CONCESSION_SCHEME = "รูปแบบสัมปทานหรือค่าตอบแทน"
+CONCESSION_OTHER_SENTINEL = 0
+
+
 class ProjectRepository:
     def __init__(self, session: Session):
         self.session = session
+
+    def _resolve_concession_ids(self, ids: List[int]) -> List[int]:
+        """Replace sentinel 0 ('อื่น ๆ') with all non-canonical concession IDs."""
+        if CONCESSION_OTHER_SENTINEL not in ids:
+            return ids
+        canonical_ids = [
+            row[0] for row in self.session.exec(
+                select(AdditionalClassification.id).where(
+                    AdditionalClassification.scheme == _CONCESSION_SCHEME,
+                    AdditionalClassification.description.in_(_PPP_CANONICAL),
+                )
+            ).all()
+        ]
+        other_ids = [
+            row[0] for row in self.session.exec(
+                select(AdditionalClassification.id).where(
+                    AdditionalClassification.scheme == _CONCESSION_SCHEME,
+                    AdditionalClassification.id.not_in(canonical_ids),
+                )
+            ).all()
+        ]
+        explicit = [i for i in ids if i != CONCESSION_OTHER_SENTINEL]
+        return list(set(explicit + other_ids))
 
     # ------------------------------------------------------------------ #
     # Basic getters
@@ -101,8 +129,9 @@ class ProjectRepository:
             )
 
         if concession_form_id:
+            resolved = self._resolve_concession_ids(concession_form_id)
             id_query = id_query.join(FilterLinkConcession, Project.id == FilterLinkConcession.project_id)
-            id_query = id_query.where(FilterLinkConcession.classification_id.in_(concession_form_id))
+            id_query = id_query.where(FilterLinkConcession.classification_id.in_(resolved))
 
         if contract_type_id:
             FilterLinkContract = aliased(ProjectAdditionalClassificationLink)
@@ -145,9 +174,33 @@ class ProjectRepository:
                     FilterLastPeriod,
                     (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == "duration"),
                 )
-            id_query = id_query.order_by(FilterLastPeriod.start_date.desc())
-
-        id_query = id_query.distinct().offset(skip).limit(limit)
+            # Add start_date to select so ORDER BY is valid with DISTINCT,
+            # then wrap as subquery to return only project ids.
+            id_query = (
+                select(Project.id)
+                .select_from(
+                    id_query.add_columns(FilterLastPeriod.start_date)
+                    .distinct()
+                    .order_by(FilterLastPeriod.start_date.desc())
+                    .offset(skip)
+                    .limit(limit)
+                    .subquery()
+                )
+            )
+        elif order_by == "title":
+            id_query = (
+                select(Project.id)
+                .select_from(
+                    id_query.add_columns(Project.title)
+                    .distinct()
+                    .order_by(Project.title.asc())
+                    .offset(skip)
+                    .limit(limit)
+                    .subquery()
+                )
+            )
+        else:
+            id_query = id_query.distinct().offset(skip).limit(limit)
         project_ids = self.session.exec(id_query).all()
 
         if not project_ids:
@@ -190,6 +243,8 @@ class ProjectRepository:
 
         if order_by == "start_date":
             statement = statement.order_by(func.min(ProjectPeriod.start_date).desc())
+        elif order_by == "title":
+            statement = statement.order_by(Project.title.asc())
 
         return self.session.exec(statement).all()
 
@@ -276,8 +331,9 @@ class ProjectRepository:
                 )
             )
         if concession_form_id:
+            resolved = self._resolve_concession_ids(concession_form_id)
             id_query = id_query.join(FilterLinkConcession, Project.id == FilterLinkConcession.project_id)
-            id_query = id_query.where(FilterLinkConcession.classification_id.in_(concession_form_id))
+            id_query = id_query.where(FilterLinkConcession.classification_id.in_(resolved))
         if contract_type_id:
             FilterLinkContract = aliased(ProjectAdditionalClassificationLink)
             id_query = id_query.join(FilterLinkContract, Project.id == FilterLinkContract.project_id)

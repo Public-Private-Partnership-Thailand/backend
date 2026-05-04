@@ -157,6 +157,7 @@ def get_risk_analysis(session: Session, sector_ids: Optional[List[int]] = None) 
             RCAlias.risk_category_id,
             RFAlias.risk_factor_id,
         )
+        .select_from(Project)
         .join(ProjectSectorLink, Project.id == ProjectSectorLink.project_id)
         .join(SectorAlias, ProjectSectorLink.sector_id == SectorAlias.id)
         .join(Risk, Project.id == Risk.project_id)
@@ -194,6 +195,7 @@ def get_risk_analysis(session: Session, sector_ids: Optional[List[int]] = None) 
             SectorAlias.code,
             func.count(func.distinct(Risk.risk_id))
         )
+        .select_from(Project)
         .join(ProjectSectorLink, Project.id == ProjectSectorLink.project_id)
         .join(SectorAlias, ProjectSectorLink.sector_id == SectorAlias.id)
         .join(Risk, Project.id == Risk.project_id)

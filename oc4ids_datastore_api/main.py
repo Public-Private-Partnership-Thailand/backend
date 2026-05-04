@@ -101,6 +101,7 @@ origins = [
     "http://localhost:8080",
     "http://localhost:3001",
     "http://127.0.0.1:3001",
+    "https://d2lr17w3de0fd5.cloudfront.net",
 ]
 
 app.add_middleware(
