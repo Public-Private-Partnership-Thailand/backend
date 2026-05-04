@@ -7,6 +7,7 @@ Previously lived in daos.py as ReferenceDataDAO.
 
 from typing import List
 from sqlmodel import Session, select
+from sqlalchemy.orm import aliased
 
 from oc4ids_datastore_api.models import (
     Sector, Ministry, AdditionalClassification,
@@ -19,8 +20,13 @@ class ReferenceRepository:
         self.session = session
 
     def get_sectors(self) -> List[Sector]:
+        # Exclude pure parent codes that exist only to group sub-sectors (e.g. "transport")
+        # by filtering out codes that have children (i.e. other codes start with "<code>.")
+        from sqlalchemy import exists
+        ChildSector = aliased(Sector)
+        has_children = exists().where(ChildSector.code.like(Sector.code + ".%"))
         return self.session.exec(
-            select(Sector).where(Sector.is_active == True, Sector.code.contains("."))
+            select(Sector).where(Sector.is_active == True, ~has_children)
         ).all()
 
     def get_ministries(self) -> List[Ministry]:
