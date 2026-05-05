@@ -88,7 +88,7 @@ class SectorBubbleResponse(BaseModel):
 
 class ContractTypeCountResponse(BaseModel):
     """Summary of project counts by contract type for pie chart"""
-    id: int
+    id: Optional[int]
     name: str
     fullName: str
     count: int
