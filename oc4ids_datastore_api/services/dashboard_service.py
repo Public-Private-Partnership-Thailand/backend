@@ -205,26 +205,24 @@ def get_dashboard_summary(
     investment_by_year_list.sort(key=lambda x: x["year"])
 
     # pieContractTypeCount mapping
-    # "Others" entry uses computed count (projects with no contract type at all).
-    # Named entries are only included when count > 0.
-    others_count = stats.get("others_contract_count", 0)
+    # Each named type uses its real DB count; empty = projects with no contract type at all.
     pie_contract_counts = []
     for ct in stats.get("contract_type_counts", []):
-        if ct["name"] == "Others":
-            if others_count > 0:
-                pie_contract_counts.append({
-                    "id": ct["id"],
-                    "name": ct["name"],
-                    "fullName": ct["fullName"],
-                    "count": others_count,
-                })
-        elif ct["count"] > 0:
+        if ct["count"] > 0:
             pie_contract_counts.append({
                 "id": ct["id"],
                 "name": ct["name"],
                 "fullName": ct["fullName"],
                 "count": ct["count"],
             })
+    others_count = stats.get("others_contract_count", 0)
+    if others_count > 0:
+        pie_contract_counts.append({
+            "id": None,
+            "name": "empty",
+            "fullName": "ไม่ระบุ",
+            "count": others_count,
+        })
 
     return {
         "summary": {

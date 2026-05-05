@@ -535,7 +535,12 @@ def get_all_projects(
         year_from=year_from, year_to=year_to,
         order_by=order_by,
     )
-    total = repo.count()
+    total = repo.count_filtered(
+        title=title, sector_id=sector_id, ministry_id=ministry_id,
+        concession_form_id=concession_form_id, contract_type_id=contract_type_id,
+        risk_category_id=risk_category_id, risk_factor_id=risk_factor_id,
+        year_from=year_from, year_to=year_to,
+    )
     data = []
     for row in results:
         ministries = set()

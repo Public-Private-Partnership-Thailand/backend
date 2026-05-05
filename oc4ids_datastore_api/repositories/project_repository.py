@@ -10,6 +10,7 @@ from typing import List, Optional
 import uuid
 from sqlmodel import Session, select, func, or_, distinct
 from sqlalchemy.orm import aliased
+from sqlalchemy import exists
 
 from oc4ids_datastore_api.models import (
     Project, Ministry, Agency, ProjectParty, PartyAdditionalIdentifier,
@@ -79,6 +80,89 @@ class ProjectRepository:
             .select_from(Project)
             .where(Project.deleted_at.is_(None))
         ).one()
+
+    def count_filtered(
+        self,
+        title: Optional[str] = None,
+        sector_id: Optional[List[int]] = None,
+        ministry_id: Optional[List[int]] = None,
+        agency_id: Optional[List[int]] = None,
+        concession_form_id: Optional[List[int]] = None,
+        contract_type_id: Optional[List[int]] = None,
+        risk_category_id: Optional[List[int]] = None,
+        risk_factor_id: Optional[List[int]] = None,
+        year_from: Optional[int] = None,
+        year_to: Optional[int] = None,
+    ) -> int:
+        FilterLastPeriod = aliased(ProjectPeriod)
+        FilterSectorLink = aliased(ProjectSectorLink)
+        FilterLinkConcession = aliased(ProjectAdditionalClassificationLink)
+        FilterAgency = aliased(Agency)
+
+        id_query = select(Project.id).where(Project.deleted_at.is_(None))
+
+        if title:
+            id_query = id_query.where(Project.title.ilike(f"%{title}%"))
+
+        if sector_id:
+            id_query = id_query.join(FilterSectorLink, Project.id == FilterSectorLink.project_id)
+            id_query = id_query.where(FilterSectorLink.sector_id.in_(sector_id))
+
+        if ministry_id:
+            id_query = id_query.join(FilterAgency, Project.public_authority_id == FilterAgency.id, isouter=True)
+            PartyMinistryFilter = aliased(Ministry)
+            PartyIdentifierFilter = aliased(PartyAdditionalIdentifier)
+            ProjectPartyFilter = aliased(ProjectParty)
+            id_query = id_query.outerjoin(ProjectPartyFilter, Project.id == ProjectPartyFilter.project_id)
+            id_query = id_query.outerjoin(PartyIdentifierFilter, ProjectPartyFilter.id == PartyIdentifierFilter.party_id)
+            id_query = id_query.outerjoin(PartyMinistryFilter, PartyIdentifierFilter.legal_name_id == PartyMinistryFilter.id)
+            id_query = id_query.where(
+                or_(
+                    PartyMinistryFilter.id.in_(ministry_id),
+                    FilterAgency.ministry_id.in_(ministry_id),
+                )
+            )
+
+        if agency_id:
+            id_query = id_query.where(Project.public_authority_id.in_(agency_id))
+
+        if concession_form_id:
+            resolved = self._resolve_concession_ids(concession_form_id)
+            id_query = id_query.join(FilterLinkConcession, Project.id == FilterLinkConcession.project_id)
+            id_query = id_query.where(FilterLinkConcession.classification_id.in_(resolved))
+
+        if contract_type_id:
+            FilterLinkContract = aliased(ProjectAdditionalClassificationLink)
+            id_query = id_query.join(FilterLinkContract, Project.id == FilterLinkContract.project_id)
+            id_query = id_query.where(FilterLinkContract.classification_id.in_(contract_type_id))
+
+        if risk_category_id or risk_factor_id:
+            FilterRisk = aliased(Risk)
+            id_query = id_query.join(FilterRisk, Project.id == FilterRisk.project_id)
+            if risk_category_id:
+                FilterRiskCatAssign = aliased(RiskCategoryAssignment)
+                id_query = id_query.join(FilterRiskCatAssign, FilterRisk.risk_id == FilterRiskCatAssign.risk_id)
+                id_query = id_query.where(FilterRiskCatAssign.risk_category_id.in_(risk_category_id))
+            if risk_factor_id:
+                FilterRiskFactorAssign = aliased(RiskFactorAssignment)
+                id_query = id_query.join(FilterRiskFactorAssign, FilterRisk.risk_id == FilterRiskFactorAssign.risk_id)
+                id_query = id_query.where(FilterRiskFactorAssign.risk_factor_id.in_(risk_factor_id))
+
+        if year_from or year_to:
+            id_query = id_query.join(
+                FilterLastPeriod,
+                (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == "duration"),
+            )
+            if year_from and year_to:
+                id_query = id_query.where(func.extract("year", FilterLastPeriod.start_date) <= year_to)
+                id_query = id_query.where(func.extract("year", FilterLastPeriod.end_date) >= year_from)
+            elif year_from:
+                id_query = id_query.where(func.extract("year", FilterLastPeriod.end_date) >= year_from)
+            elif year_to:
+                id_query = id_query.where(func.extract("year", FilterLastPeriod.start_date) <= year_to)
+
+        subq = id_query.distinct().subquery()
+        return self.session.exec(select(func.count()).select_from(subq)).one()
 
     # ------------------------------------------------------------------ #
     # Filtered list query
@@ -172,11 +256,12 @@ class ProjectRepository:
                 id_query = id_query.join(
                     FilterLastPeriod,
                     (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == "duration"),
+                    isouter=True,
                 )
             subq = (
                 id_query.add_columns(FilterLastPeriod.start_date)
                 .distinct()
-                .order_by(FilterLastPeriod.start_date.desc())
+                .order_by(FilterLastPeriod.start_date.desc().nullslast())
                 .offset(skip)
                 .limit(limit)
                 .subquery()
@@ -364,8 +449,10 @@ class ProjectRepository:
         total_projects = self.session.exec(select(func.count()).select_from(filtered_project_ids)).one()
 
         if total_projects == 0:
+            _ChildSector = aliased(Sector)
+            _has_children = exists().where(_ChildSector.code.like(Sector.code + ".%"))
             all_active_sectors = self.session.exec(
-                select(Sector.name_en).where(Sector.is_active == True)
+                select(Sector.name_en).where(Sector.is_active == True, ~_has_children)
             ).all()
             empty_sector_stats = {
                 s: {"total": {"count": 0, "investment": 0}, "small": {"count": 0, "investment": 0},
@@ -462,7 +549,9 @@ class ProjectRepository:
             .where(Project.id.in_(select(filtered_project_ids.c.id)))
             .group_by(SectorAlias.id, SectorAlias.name_en)
         )
-        all_active_sectors_query = select(Sector.name_en).where(Sector.is_active == True)
+        _ChildSector2 = aliased(Sector)
+        _has_children2 = exists().where(_ChildSector2.code.like(Sector.code + ".%"))
+        all_active_sectors_query = select(Sector.name_en).where(Sector.is_active == True, ~_has_children2)
         all_active_sectors = self.session.exec(all_active_sectors_query).all()
         sector_stats = {
             s: {"total": {"count": 0, "investment": 0}, "small": {"count": 0, "investment": 0},
@@ -543,6 +632,7 @@ class ProjectRepository:
             .where(Project.id.in_(select(filtered_project_ids.c.id)))
             .group_by(PublicAuthAgency.id, PublicAuthAgency.name_th)
             .order_by(func.count(Project.id).desc())
+            .limit(5)
         ).all()
         pa_stats = [{"publicAuthorityName": row[0], "projectCount": row[1]} for row in pa_results]
 
@@ -560,7 +650,9 @@ class ProjectRepository:
             .where(Project.id.in_(select(filtered_project_ids.c.id)))
             .group_by(SectorBubbleAlias.id, SectorBubbleAlias.code)
         ).all()
-        all_active_sectors_objs = self.session.exec(select(Sector).where(Sector.is_active == True)).all()
+        _ChildSector3 = aliased(Sector)
+        _has_children3 = exists().where(_ChildSector3.code.like(Sector.code + ".%"))
+        all_active_sectors_objs = self.session.exec(select(Sector).where(Sector.is_active == True, ~_has_children3)).all()
         bubble_map = {
             s.code: {"sector": s.code, "projectCount": 0, "totalValue": 0, "authorityCount": 0}
             for s in all_active_sectors_objs
@@ -600,21 +692,21 @@ class ProjectRepository:
             for row in contract_type_results
         ]
 
-        # Count projects that have at least one contract type classification.
-        # Projects with none are the true "Others".
+        # Count projects with NO contract type classification at all (truly empty).
         ContractTypeAliasOthers = aliased(AdditionalClassification)
         ProjectClassificationLinkAliasOthers = aliased(ProjectAdditionalClassificationLink)
-        classified_project_count = self.session.exec(
-            select(func.count(func.distinct(Project.id)))
-            .select_from(Project)
-            .join(ProjectClassificationLinkAliasOthers, Project.id == ProjectClassificationLinkAliasOthers.project_id)
+        classified_ids_subq = (
+            select(ProjectClassificationLinkAliasOthers.project_id)
             .join(ContractTypeAliasOthers, ProjectClassificationLinkAliasOthers.classification_id == ContractTypeAliasOthers.id)
-            .where(
-                func.trim(ContractTypeAliasOthers.scheme) == "รูปแบบการจัดสรรกรรมสิทธิ์",
-                Project.id.in_(select(filtered_project_ids.c.id))
-            )
+            .where(func.trim(ContractTypeAliasOthers.scheme) == "รูปแบบการจัดสรรกรรมสิทธิ์")
+            .distinct()
+            .subquery()
+        )
+        others_contract_count = self.session.exec(
+            select(func.count())
+            .select_from(filtered_project_ids)
+            .where(filtered_project_ids.c.id.not_in(select(classified_ids_subq.c.project_id)))
         ).one() or 0
-        others_contract_count = total_projects - classified_project_count
 
         return {
             "total_projects": total_projects,

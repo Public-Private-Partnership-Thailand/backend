@@ -8,7 +8,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional
 from sqlmodel import Session, select
 from sqlalchemy.orm import aliased
-from sqlalchemy import func
+from sqlalchemy import func, exists
 
 from oc4ids_datastore_api.models import (
     RiskCategory, RiskFactor, RiskPhase, RiskPattern, RiskSource,
@@ -29,8 +29,8 @@ def get_risk_analysis(session: Session, sector_ids: Optional[List[int]] = None) 
     all_sources = session.exec(select(RiskSource).order_by(RiskSource.rs_id)).all()
     all_patterns = session.exec(select(RiskPattern)).all()
 
-    cat_code_map = {c.risk_category_id: c.category_code for c in all_categories}
-    factor_name_map = {f.risk_factor_id: f.factor_name for f in all_factors}
+    category_id_set = {c.risk_category_id for c in all_categories}
+    factor_id_set = {f.risk_factor_id for f in all_factors}
 
     phase_bit_map = {p.phase_id_from_bit_mask: p.phase_name for p in all_phases if p.phase_id_from_bit_mask}
     source_bit_map = {s.rs_id_from_bit_mask: (s.rs_id, s.country) for s in all_sources if s.rs_id_from_bit_mask}
@@ -68,10 +68,11 @@ def get_risk_analysis(session: Session, sector_ids: Optional[List[int]] = None) 
 
     heatmap: dict = {}
     for pattern in all_patterns:
-        cat_code = cat_code_map.get(pattern.risk_category_id)
-        fac_name = factor_name_map.get(pattern.risk_factor_id)
-        if not cat_code or not fac_name:
+        if pattern.risk_category_id not in category_id_set or pattern.risk_factor_id not in factor_id_set:
             continue
+
+        cat_key = f"C{pattern.risk_category_id}"
+        fac_key = f"F{pattern.risk_factor_id}"
 
         phase_list = [
             phase_name
@@ -90,14 +91,16 @@ def get_risk_analysis(session: Session, sector_ids: Optional[List[int]] = None) 
         if otp_data:
             source_dict["thailand-otp"] = otp_data
 
-        if cat_code not in heatmap:
-            heatmap[cat_code] = {}
-        heatmap[cat_code][fac_name] = {"phase": phase_list, "source": dict(source_dict)}
+        if cat_key not in heatmap:
+            heatmap[cat_key] = {}
+        heatmap[cat_key][fac_key] = {"phase": phase_list, "source": dict(source_dict)}
 
     # ------------------------------------------------------------------ #
     # Build sectorMinistryHeatmap
     # ------------------------------------------------------------------ #
-    sector_stmt = select(Sector).where(Sector.is_active == True)
+    ChildSector = aliased(Sector)
+    has_children = exists().where(ChildSector.code.like(Sector.code + ".%"))
+    sector_stmt = select(Sector).where(Sector.is_active == True, ~has_children)
     if sector_ids:
         sector_stmt = sector_stmt.where(Sector.id.in_(sector_ids))
     all_active_sectors = session.exec(sector_stmt).all()
