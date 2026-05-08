@@ -508,6 +508,351 @@ def _create_risks(session: Session, project_id: uuid.UUID, risks_list: List[Dict
             session.add(Impact(risk_id=risk_obj.risk_id, description=str(impact_raw), kind="impact"))
 
 
+# ---------------------------------------------------------------------------
+# Top-level section creators (used by create_project_data)
+# ---------------------------------------------------------------------------
+
+_PERIOD_KEY_MAP = {
+    "period": "duration",
+    "identificationPeriod": "identification",
+    "preparationPeriod": "preparation",
+    "implementationPeriod": "implementation",
+    "completionPeriod": "completion",
+    "maintenancePeriod": "maintenance",
+    "decommissioningPeriod": "decommissioning",
+    "assetLifetime": "assetLifetime",
+}
+
+
+def _create_sectors(session: Session, project: Project, sector_list: List) -> None:
+    for s_data in sector_list:
+        s_code = s_data.get("id") if isinstance(s_data, dict) else s_data
+        if not s_code:
+            continue
+        sector_obj = session.exec(select(Sector).where(Sector.code == s_code)).first()
+        if not sector_obj:
+            logger.warning(f"Sector '{s_code}' not found. Skipping.")
+            continue
+        project.sectors.append(sector_obj)
+
+
+def _create_additional_classifications(session: Session, project: Project, ac_list: List[Dict]) -> None:
+    for ac in ac_list:
+        scheme = ac.get("scheme")
+        if not scheme:
+            continue
+
+        ac_obj = None
+        raw_id = ac.get("id")
+
+        # 1. Numeric id → look up by DB primary key (reference endpoint sends id as int)
+        if isinstance(raw_id, int):
+            ac_obj = session.get(AdditionalClassification, raw_id)
+            if ac_obj and ac_obj.scheme != scheme:
+                ac_obj = None  # wrong scheme, ignore
+
+        # 2. String id/code → look up by code
+        if not ac_obj:
+            code = (str(raw_id) if raw_id and not isinstance(raw_id, int) else None) or ac.get("code")
+            if code:
+                ac_obj = session.exec(
+                    select(AdditionalClassification).where(
+                        AdditionalClassification.scheme == scheme,
+                        AdditionalClassification.code == code,
+                    )
+                ).first()
+
+        # 3. Fallback: look up by description
+        if not ac_obj:
+            desc = ac.get("description")
+            if desc:
+                ac_obj = session.exec(
+                    select(AdditionalClassification).where(
+                        AdditionalClassification.scheme == scheme,
+                        AdditionalClassification.description == desc,
+                    )
+                ).first()
+
+        # 4. Create only when an explicit string code is provided (never create from numeric id)
+        if not ac_obj:
+            code = ac.get("code") or (str(raw_id) if raw_id and not isinstance(raw_id, int) else None)
+            if not code:
+                continue
+            ac_obj = AdditionalClassification(
+                scheme=scheme,
+                code=code,
+                description=ac.get("description"),
+            )
+            session.add(ac_obj)
+            session.flush()
+            session.refresh(ac_obj)
+        else:
+            if ac.get("description") and ac_obj.description != ac.get("description"):
+                ac_obj.description = ac.get("description")
+                session.add(ac_obj)
+
+        if ac_obj not in project.additional_classifications:
+            project.additional_classifications.append(ac_obj)
+
+
+def _create_locations(session: Session, project_id: uuid.UUID, locations: List[Dict]) -> None:
+    for loc in locations:
+        l_obj = ProjectLocation(
+            project_id=project_id,
+            description=loc.get("description"),
+            geometry_coordinates=loc.get("geometry"),
+            street_address=loc.get("address", {}).get("streetAddress"),
+            locality=loc.get("address", {}).get("locality"),
+            region=loc.get("address", {}).get("region"),
+            postal_code=loc.get("address", {}).get("postalCode"),
+            country_name=loc.get("address", {}).get("countryName"),
+        )
+        session.add(l_obj)
+        session.flush()
+        if "gazetteers" in loc:
+            _create_location_gazetteers(session, l_obj.id, loc["gazetteers"])
+
+
+def _create_documents(session: Session, project_id: uuid.UUID, documents: List[Dict]) -> None:
+    for doc in documents:
+        session.add(ProjectDocument(
+            project_id=project_id,
+            local_id=doc.get("id", str(uuid.uuid4())),
+            document_type=doc.get("documentType"),
+            title=doc.get("title"),
+            description=doc.get("description"),
+            url=doc.get("url"),
+            date_published=_parse_date(doc.get("datePublished")),
+            date_modified=_parse_date(doc.get("dateModified")),
+            format=doc.get("format"),
+            author=doc.get("author"),
+        ))
+
+
+def _create_budget(session: Session, project_id: uuid.UUID, b_data: Dict) -> None:
+    amt_val = None
+    curr_code = None
+    if "amount" in b_data:
+        if isinstance(b_data["amount"], dict):
+            amt_val = b_data["amount"].get("amount")
+            curr_code = b_data["amount"].get("currency")
+        else:
+            amt_val = b_data.get("amount")
+            curr_code = b_data.get("currency")
+    if curr_code:
+        _ensure_currency(session, curr_code)
+    b_obj = ProjectBudget(
+        project_id=project_id,
+        description=b_data.get("description"),
+        total_amount=amt_val,
+        currency=curr_code,
+        request_date=_parse_date(b_data.get("requestDate")),
+        approval_date=_parse_date(b_data.get("approvalDate")),
+    )
+    session.add(b_obj)
+    session.flush()
+    for group in b_data.get("budgetBreakdowns", []):
+        group_obj = BudgetBreakdown(
+            budget_id=b_obj.id,
+            local_id=group.get("id", str(uuid.uuid4())),
+            description=group.get("description"),
+        )
+        session.add(group_obj)
+        session.flush()
+        for item_data in group.get("budgetBreakdown", []):
+            _create_breakdown_item(session, group_obj.id, item_data)
+    if "finance" in b_data:
+        _create_project_finance(session, b_obj.id, b_data["finance"])
+
+
+def _create_periods(session: Session, project_id: uuid.UUID, project_data: Dict) -> None:
+    for p_key, p_type in _PERIOD_KEY_MAP.items():
+        if p_key in project_data and isinstance(project_data[p_key], dict):
+            per = project_data[p_key]
+            _get_or_create_ref(session, PeriodType, "code", p_type, {"name_en": p_type.capitalize() + " Period"})
+            session.add(ProjectPeriod(
+                project_id=project_id,
+                period_type=p_type,
+                start_date=_parse_date(per.get("startDate")),
+                end_date=_parse_date(per.get("endDate")),
+                duration_days=per.get("durationInDays"),
+                max_extent_date=_parse_date(per.get("maxExtentDate")),
+            ))
+
+
+def _create_identifiers_list(session: Session, project_id: uuid.UUID, identifiers: List[Dict]) -> None:
+    for ident in identifiers:
+        session.add(ProjectIdentifier(
+            project_id=project_id,
+            identifier_value=ident.get("id"),
+            scheme=ident.get("scheme"),
+        ))
+
+
+def _create_related_projects(session: Session, project_id: uuid.UUID, rp_list: List[Dict]) -> None:
+    for rp in rp_list:
+        rels = rp.get("relationship")
+        rel_str = "related"
+        if isinstance(rels, list) and rels:
+            rel_str = rels[0]
+        elif isinstance(rels, str):
+            rel_str = rels
+        rp_identifier = rp.get("identifier")
+        resolved_project_id = None
+        if rp_identifier:
+            pi_obj = session.exec(
+                select(ProjectIdentifier).where(ProjectIdentifier.identifier_value == rp_identifier)
+            ).first()
+            if pi_obj:
+                resolved_project_id = pi_obj.project_id
+        session.add(ProjectRelatedProject(
+            project_id=project_id,
+            related_project_id=resolved_project_id,
+            scheme=rp.get("scheme"),
+            identifier=rp_identifier or rp.get("id", ""),
+            relationship=rel_str,
+            title=rp.get("title"),
+            uri=rp.get("uri"),
+        ))
+
+
+def _create_parties(session: Session, project_id: uuid.UUID, parties: List[Dict]) -> None:
+    for party in parties:
+        legal_name = party.get("identifier", {}).get("legalName")
+        agency_id = None
+        if legal_name:
+            ministry = session.exec(select(Ministry).where(Ministry.name_th == legal_name)).first()
+            agency_defaults = {"name_en": legal_name}
+            if ministry:
+                agency_defaults["ministry_id"] = ministry.id
+            agency_obj = _get_or_create_ref(session, Agency, "name_th", legal_name, agency_defaults)
+            if ministry and agency_obj.ministry_id != ministry.id:
+                agency_obj.ministry_id = ministry.id
+                session.add(agency_obj)
+                session.flush()
+            agency_id = agency_obj.id
+        p_obj = ProjectParty(
+            project_id=project_id,
+            local_id=party.get("id", str(uuid.uuid4())),
+            name=party.get("name"),
+            identifier_scheme=party.get("identifier", {}).get("scheme"),
+            identifier_value=party.get("identifier", {}).get("id"),
+            identifier_uri=party.get("identifier", {}).get("uri"),
+            identifier_legal_name_id=agency_id,
+            street_address=party.get("address", {}).get("streetAddress"),
+            locality=party.get("address", {}).get("locality"),
+            region=party.get("address", {}).get("region"),
+            postal_code=party.get("address", {}).get("postalCode"),
+            country_name=party.get("address", {}).get("countryName"),
+            contact_name=party.get("contactPoint", {}).get("name"),
+            contact_email=party.get("contactPoint", {}).get("email"),
+            contact_telephone=party.get("contactPoint", {}).get("telephone"),
+            contact_fax=party.get("contactPoint", {}).get("fax"),
+            contact_url=party.get("contactPoint", {}).get("url"),
+            role=party.get("role"),
+        )
+        session.add(p_obj)
+        session.flush()
+        if "additionalIdentifiers" in party:
+            for ai in party["additionalIdentifiers"]:
+                ai_legal_name = ai.get("legalName")
+                ai_ministry_id = None
+                if ai_legal_name:
+                    min_obj = _get_or_create_ref(session, Ministry, "name_th", ai_legal_name, {"name_en": ai_legal_name})
+                    ai_ministry_id = min_obj.id
+                session.add(PartyAdditionalIdentifier(
+                    party_id=p_obj.id,
+                    scheme=ai.get("scheme"),
+                    identifier=ai.get("id"),
+                    legal_name_id=ai_ministry_id,
+                    uri=ai.get("uri"),
+                ))
+        _create_party_details(session, p_obj.id, party)
+
+
+def _create_contracting_processes(session: Session, project_id: uuid.UUID, cp_list: List[Dict]) -> None:
+    for cp in cp_list:
+        summary = cp.get("summary", {})
+        c_curr = summary.get("contractValue", {}).get("currency")
+        _ensure_currency(session, c_curr)
+        cp_obj = ProjectContractingProcess(
+            project_id=project_id,
+            local_id=cp.get("id", str(uuid.uuid4())),
+            ocid=summary.get("ocid"),
+            title=summary.get("title"),
+            description=summary.get("description"),
+            status=summary.get("status"),
+            nature=summary.get("nature"),
+            contract_amount=summary.get("contractValue", {}).get("amount"),
+            contract_currency=c_curr,
+            period_start_date=_parse_date(summary.get("contractPeriod", {}).get("startDate")),
+            period_end_date=_parse_date(summary.get("contractPeriod", {}).get("endDate")),
+            period_duration_days=summary.get("contractPeriod", {}).get("durationInDays"),
+        )
+        session.add(cp_obj)
+        session.flush()
+        for m in summary.get("milestones", []):
+            val = m.get("value", {})
+            session.add(ContractingProcessMilestone(
+                process_id=cp_obj.id,
+                local_id=m.get("id", str(uuid.uuid4())),
+                title=m.get("title"),
+                type=m.get("type"),
+                description=m.get("description"),
+                code=m.get("code"),
+                date=_parse_date(m.get("date")),
+                date_met=_parse_date(m.get("dateMet")),
+                date_modified=_parse_date(m.get("dateModified")),
+                status=m.get("status"),
+                value_amount=val.get("amount"),
+                value_currency=val.get("currency"),
+            ))
+        for t in summary.get("transactions", []):
+            val = t.get("value", {})
+            session.add(ContractingProcessTransaction(
+                process_id=cp_obj.id,
+                local_id=t.get("id", str(uuid.uuid4())),
+                source=t.get("source"),
+                date=_parse_date(t.get("date")),
+                amount=val.get("amount"),
+                currency=val.get("currency"),
+                payer_name=t.get("payer", {}).get("name"),
+                payee_name=t.get("payee", {}).get("name"),
+                uri=t.get("uri"),
+            ))
+        for mod in summary.get("modifications", []):
+            cv = mod.get("contractValue", {})
+            orig = cv.get("originalAmount", {})
+            new_val = cv.get("amount", {})
+            session.add(ContractingProcessModification(
+                process_id=cp_obj.id,
+                local_id=mod.get("id", str(uuid.uuid4())),
+                date=_parse_date(mod.get("date")),
+                description=mod.get("description"),
+                rationale=mod.get("rationale"),
+                type=mod.get("type"),
+                release_id=mod.get("releaseID"),
+                old_amount=orig.get("amount"),
+                old_currency=orig.get("currency"),
+                new_amount=new_val.get("amount"),
+                new_currency=new_val.get("currency"),
+            ))
+        for d in summary.get("documents", []):
+            session.add(ContractingProcessDocument(
+                process_id=cp_obj.id,
+                local_id=d.get("id", str(uuid.uuid4())),
+                document_type=d.get("documentType"),
+                title=d.get("title"),
+                description=d.get("description"),
+                url=d.get("url"),
+                date_published=_parse_date(d.get("datePublished")),
+                format=d.get("format"),
+                language=d.get("language"),
+            ))
+        _create_contracting_tenders(session, cp_obj.id, summary)
+        _create_contracting_details(session, cp_obj.id, summary)
+
+
 # ===========================================================================
 # Public Service Functions
 # ===========================================================================
@@ -609,11 +954,9 @@ def create_project_data(
     project_data["id"] = str(pid)
     project_id_str = project_data["id"]
     logger.info(f"Creating project data for {project_id_str}")
-
-    # Validation (Relaxed by user request)
     logger.info(f"Skipping strict validation for project {project_id_str}")
 
-    # Build core project
+    # Build core project (project_type + public_authority resolution)
     model_data = {k: project_data[k] for k in ["id", "title", "description", "status", "purpose"] if k in project_data}
     pt = _get_or_create_ref(session, ProjectType, "code", project_data["type"], {"name_en": project_data["type"]})
     model_data["project_type_id"] = pt.id
@@ -621,8 +964,7 @@ def create_project_data(
     if "publicAuthority" in project_data:
         pa_name = project_data["publicAuthority"].get("name")
         if pa_name:
-            ministry_stmt = select(Ministry).where(Ministry.name_th == pa_name)
-            ministry = session.exec(ministry_stmt).first()
+            ministry = session.exec(select(Ministry).where(Ministry.name_th == pa_name)).first()
             agency_defaults = {"name_en": pa_name}
             if ministry:
                 agency_defaults["ministry_id"] = ministry.id
@@ -637,207 +979,22 @@ def create_project_data(
     session.add(db_project)
     session.flush()
 
-    # Identifiers
+    # Top-level OC4IDS identifier (from caller-supplied id)
     if input_id:
         session.add(ProjectIdentifier(project_id=db_project.id, identifier_value=str(input_id), scheme="OC4IDS"))
 
-    # Sectors
-    for s_data in project_data.get("sector", []):
-        s_code = s_data.get("id") if isinstance(s_data, dict) else s_data
-        if not s_code:
-            continue
-        sector_obj = session.exec(select(Sector).where(Sector.code == s_code)).first()
-        if not sector_obj:
-            logger.warning(f"Sector '{s_code}' not found. Skipping.")
-            continue
-        db_project.sectors.append(sector_obj)
-
-    # Additional Classifications
-    for ac in project_data.get("additionalClassifications", []):
-        scheme = ac.get("scheme")
-        if not scheme:
-            continue
-
-        ac_obj = None
-        raw_id = ac.get("id")
-
-        # 1. Numeric id → look up by DB primary key (reference endpoint sends id as int)
-        if isinstance(raw_id, int):
-            ac_obj = session.get(AdditionalClassification, raw_id)
-            if ac_obj and ac_obj.scheme != scheme:
-                ac_obj = None  # wrong scheme, ignore
-
-        # 2. String id/code → look up by code
-        if not ac_obj:
-            code = (str(raw_id) if raw_id and not isinstance(raw_id, int) else None) or ac.get("code")
-            if code:
-                ac_obj = session.exec(
-                    select(AdditionalClassification).where(
-                        AdditionalClassification.scheme == scheme,
-                        AdditionalClassification.code == code,
-                    )
-                ).first()
-
-        # 3. Fallback: look up by description
-        if not ac_obj:
-            desc = ac.get("description")
-            if desc:
-                ac_obj = session.exec(
-                    select(AdditionalClassification).where(
-                        AdditionalClassification.scheme == scheme,
-                        AdditionalClassification.description == desc,
-                    )
-                ).first()
-
-        # 4. Create only when an explicit string code is provided (never create from numeric id)
-        if not ac_obj:
-            code = ac.get("code") or (str(raw_id) if raw_id and not isinstance(raw_id, int) else None)
-            if not code:
-                continue
-            ac_obj = AdditionalClassification(
-                scheme=scheme,
-                code=code,
-                description=ac.get("description"),
-            )
-            session.add(ac_obj)
-            session.flush()
-            session.refresh(ac_obj)
-        else:
-            if ac.get("description") and ac_obj.description != ac.get("description"):
-                ac_obj.description = ac.get("description")
-                session.add(ac_obj)
-
-        if ac_obj not in db_project.additional_classifications:
-            db_project.additional_classifications.append(ac_obj)
-
-    # Locations
-    for loc in project_data.get("locations", []):
-        l_obj = ProjectLocation(
-            project_id=db_project.id,
-            description=loc.get("description"),
-            geometry_coordinates=loc.get("geometry"),
-            street_address=loc.get("address", {}).get("streetAddress"),
-            locality=loc.get("address", {}).get("locality"),
-            region=loc.get("address", {}).get("region"),
-            postal_code=loc.get("address", {}).get("postalCode"),
-            country_name=loc.get("address", {}).get("countryName"),
-        )
-        session.add(l_obj)
-        session.flush()
-        if "gazetteers" in loc:
-            _create_location_gazetteers(session, l_obj.id, loc["gazetteers"])
-
-    # Documents
-    for doc in project_data.get("documents", []):
-        session.add(ProjectDocument(
-            project_id=db_project.id,
-            local_id=doc.get("id", str(uuid.uuid4())),
-            document_type=doc.get("documentType"),
-            title=doc.get("title"),
-            description=doc.get("description"),
-            url=doc.get("url"),
-            date_published=_parse_date(doc.get("datePublished")),
-            date_modified=_parse_date(doc.get("dateModified")),
-            format=doc.get("format"),
-            author=doc.get("author"),
-        ))
-
-    # Budget
+    # Children — order preserved from previous implementation
+    _create_sectors(session, db_project, project_data.get("sector", []))
+    _create_additional_classifications(session, db_project, project_data.get("additionalClassifications", []))
+    _create_locations(session, db_project.id, project_data.get("locations", []))
+    _create_documents(session, db_project.id, project_data.get("documents", []))
     if "budget" in project_data:
-        b_data = project_data["budget"]
-        amt_val = None
-        curr_code = None
-        if "amount" in b_data:
-            if isinstance(b_data["amount"], dict):
-                amt_val = b_data["amount"].get("amount")
-                curr_code = b_data["amount"].get("currency")
-            else:
-                amt_val = b_data.get("amount")
-                curr_code = b_data.get("currency")
-        if curr_code:
-            _ensure_currency(session, curr_code)
-        b_obj = ProjectBudget(
-            project_id=db_project.id,
-            description=b_data.get("description"),
-            total_amount=amt_val,
-            currency=curr_code,
-            request_date=_parse_date(b_data.get("requestDate")),
-            approval_date=_parse_date(b_data.get("approvalDate")),
-        )
-        session.add(b_obj)
-        session.flush()
-        for group in b_data.get("budgetBreakdowns", []):
-            group_obj = BudgetBreakdown(
-                budget_id=b_obj.id,
-                local_id=group.get("id", str(uuid.uuid4())),
-                description=group.get("description"),
-            )
-            session.add(group_obj)
-            session.flush()
-            for item_data in group.get("budgetBreakdown", []):
-                _create_breakdown_item(session, group_obj.id, item_data)
-        if "finance" in b_data:
-            _create_project_finance(session, b_obj.id, b_data["finance"])
+        _create_budget(session, db_project.id, project_data["budget"])
+    _create_periods(session, db_project.id, project_data)
+    _create_identifiers_list(session, db_project.id, project_data.get("identifiers", []))
+    _create_related_projects(session, db_project.id, project_data.get("relatedProjects", []))
 
-    # Periods
-    period_keys = {
-        "period": "duration",
-        "identificationPeriod": "identification",
-        "preparationPeriod": "preparation",
-        "implementationPeriod": "implementation",
-        "completionPeriod": "completion",
-        "maintenancePeriod": "maintenance",
-        "decommissioningPeriod": "decommissioning",
-        "assetLifetime": "assetLifetime",
-    }
-    for p_key, p_type in period_keys.items():
-        if p_key in project_data and isinstance(project_data[p_key], dict):
-            per = project_data[p_key]
-            _get_or_create_ref(session, PeriodType, "code", p_type, {"name_en": p_type.capitalize() + " Period"})
-            session.add(ProjectPeriod(
-                project_id=db_project.id,
-                period_type=p_type,
-                start_date=_parse_date(per.get("startDate")),
-                end_date=_parse_date(per.get("endDate")),
-                duration_days=per.get("durationInDays"),
-                max_extent_date=_parse_date(per.get("maxExtentDate")),
-            ))
-
-    # Identifiers list
-    for ident in project_data.get("identifiers", []):
-        session.add(ProjectIdentifier(
-            project_id=db_project.id,
-            identifier_value=ident.get("id"),
-            scheme=ident.get("scheme"),
-        ))
-
-    # Related Projects
-    for rp in project_data.get("relatedProjects", []):
-        rels = rp.get("relationship")
-        rel_str = "related"
-        if isinstance(rels, list) and rels:
-            rel_str = rels[0]
-        elif isinstance(rels, str):
-            rel_str = rels
-        rp_identifier = rp.get("identifier")
-        resolved_project_id = None
-        if rp_identifier:
-            pi_obj = session.exec(
-                select(ProjectIdentifier).where(ProjectIdentifier.identifier_value == rp_identifier)
-            ).first()
-            if pi_obj:
-                resolved_project_id = pi_obj.project_id
-        session.add(ProjectRelatedProject(
-            project_id=db_project.id,
-            related_project_id=resolved_project_id,
-            scheme=rp.get("scheme"),
-            identifier=rp_identifier or rp.get("id", ""),
-            relationship=rel_str,
-            title=rp.get("title"),
-            uri=rp.get("uri"),
-        ))
-
-    # Optional sub-objects
+    # Optional sub-objects (already-extracted helpers)
     if "costMeasurements" in project_data:
         _create_cost_measurements(session, db_project.id, project_data["costMeasurements"])
     if "forecasts" in project_data:
@@ -861,142 +1018,10 @@ def create_project_data(
     if "risks" in project_data and isinstance(project_data["risks"], list):
         _create_risks(session, db_project.id, project_data["risks"])
 
-    # Parties
-    for party in project_data.get("parties", []):
-        legal_name = party.get("identifier", {}).get("legalName")
-        agency_id = None
-        if legal_name:
-            ministry = session.exec(select(Ministry).where(Ministry.name_th == legal_name)).first()
-            agency_defaults = {"name_en": legal_name}
-            if ministry:
-                agency_defaults["ministry_id"] = ministry.id
-            agency_obj = _get_or_create_ref(session, Agency, "name_th", legal_name, agency_defaults)
-            if ministry and agency_obj.ministry_id != ministry.id:
-                agency_obj.ministry_id = ministry.id
-                session.add(agency_obj)
-                session.flush()
-            agency_id = agency_obj.id
-        p_obj = ProjectParty(
-            project_id=db_project.id,
-            local_id=party.get("id", str(uuid.uuid4())),
-            name=party.get("name"),
-            identifier_scheme=party.get("identifier", {}).get("scheme"),
-            identifier_value=party.get("identifier", {}).get("id"),
-            identifier_uri=party.get("identifier", {}).get("uri"),
-            identifier_legal_name_id=agency_id,
-            street_address=party.get("address", {}).get("streetAddress"),
-            locality=party.get("address", {}).get("locality"),
-            region=party.get("address", {}).get("region"),
-            postal_code=party.get("address", {}).get("postalCode"),
-            country_name=party.get("address", {}).get("countryName"),
-            contact_name=party.get("contactPoint", {}).get("name"),
-            contact_email=party.get("contactPoint", {}).get("email"),
-            contact_telephone=party.get("contactPoint", {}).get("telephone"),
-            contact_fax=party.get("contactPoint", {}).get("fax"),
-            contact_url=party.get("contactPoint", {}).get("url"),
-            role=party.get("role"),
-        )
-        session.add(p_obj)
-        session.flush()
-        if "additionalIdentifiers" in party:
-            for ai in party["additionalIdentifiers"]:
-                ai_legal_name = ai.get("legalName")
-                ai_ministry_id = None
-                if ai_legal_name:
-                    min_obj = _get_or_create_ref(session, Ministry, "name_th", ai_legal_name, {"name_en": ai_legal_name})
-                    ai_ministry_id = min_obj.id
-                session.add(PartyAdditionalIdentifier(
-                    party_id=p_obj.id,
-                    scheme=ai.get("scheme"),
-                    identifier=ai.get("id"),
-                    legal_name_id=ai_ministry_id,
-                    uri=ai.get("uri"),
-                ))
-        _create_party_details(session, p_obj.id, party)
+    _create_parties(session, db_project.id, project_data.get("parties", []))
+    _create_contracting_processes(session, db_project.id, project_data.get("contractingProcesses", []))
 
-    # Contracting Processes
-    for cp in project_data.get("contractingProcesses", []):
-        summary = cp.get("summary", {})
-        c_curr = summary.get("contractValue", {}).get("currency")
-        _ensure_currency(session, c_curr)
-        cp_obj = ProjectContractingProcess(
-            project_id=db_project.id,
-            local_id=cp.get("id", str(uuid.uuid4())),
-            ocid=summary.get("ocid"),
-            title=summary.get("title"),
-            description=summary.get("description"),
-            status=summary.get("status"),
-            nature=summary.get("nature"),
-            contract_amount=summary.get("contractValue", {}).get("amount"),
-            contract_currency=c_curr,
-            period_start_date=_parse_date(summary.get("contractPeriod", {}).get("startDate")),
-            period_end_date=_parse_date(summary.get("contractPeriod", {}).get("endDate")),
-            period_duration_days=summary.get("contractPeriod", {}).get("durationInDays"),
-        )
-        session.add(cp_obj)
-        session.flush()
-        for m in summary.get("milestones", []):
-            val = m.get("value", {})
-            session.add(ContractingProcessMilestone(
-                process_id=cp_obj.id,
-                local_id=m.get("id", str(uuid.uuid4())),
-                title=m.get("title"),
-                type=m.get("type"),
-                description=m.get("description"),
-                code=m.get("code"),
-                date=_parse_date(m.get("date")),
-                date_met=_parse_date(m.get("dateMet")),
-                date_modified=_parse_date(m.get("dateModified")),
-                status=m.get("status"),
-                value_amount=val.get("amount"),
-                value_currency=val.get("currency"),
-            ))
-        for t in summary.get("transactions", []):
-            val = t.get("value", {})
-            session.add(ContractingProcessTransaction(
-                process_id=cp_obj.id,
-                local_id=t.get("id", str(uuid.uuid4())),
-                source=t.get("source"),
-                date=_parse_date(t.get("date")),
-                amount=val.get("amount"),
-                currency=val.get("currency"),
-                payer_name=t.get("payer", {}).get("name"),
-                payee_name=t.get("payee", {}).get("name"),
-                uri=t.get("uri"),
-            ))
-        for mod in summary.get("modifications", []):
-            cv = mod.get("contractValue", {})
-            orig = cv.get("originalAmount", {})
-            new_val = cv.get("amount", {})
-            session.add(ContractingProcessModification(
-                process_id=cp_obj.id,
-                local_id=mod.get("id", str(uuid.uuid4())),
-                date=_parse_date(mod.get("date")),
-                description=mod.get("description"),
-                rationale=mod.get("rationale"),
-                type=mod.get("type"),
-                release_id=mod.get("releaseID"),
-                old_amount=orig.get("amount"),
-                old_currency=orig.get("currency"),
-                new_amount=new_val.get("amount"),
-                new_currency=new_val.get("currency"),
-            ))
-        for d in summary.get("documents", []):
-            session.add(ContractingProcessDocument(
-                process_id=cp_obj.id,
-                local_id=d.get("id", str(uuid.uuid4())),
-                document_type=d.get("documentType"),
-                title=d.get("title"),
-                description=d.get("description"),
-                url=d.get("url"),
-                date_published=_parse_date(d.get("datePublished")),
-                format=d.get("format"),
-                language=d.get("language"),
-            ))
-        _create_contracting_tenders(session, cp_obj.id, summary)
-        _create_contracting_details(session, cp_obj.id, summary)
-
-    # Commit
+    # Commit / flush
     if auto_commit:
         try:
             session.commit()
