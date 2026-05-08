@@ -407,6 +407,7 @@ class RiskResponse(BaseModel):
     risk_id: Optional[int] = None
     title: Optional[str] = None
     phase: Optional[str] = None
+    description: Optional[List[str]] = None
     category_drivers: Optional[List[CategoryDriverResponse]] = None
     mitigation_handling: Optional[List[MitigationHandlingResponse]] = None
     impact_statement: Optional[List[str]] = None

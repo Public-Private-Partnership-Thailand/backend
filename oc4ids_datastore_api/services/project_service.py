@@ -487,21 +487,25 @@ def _create_risks(session: Session, project_id: uuid.UUID, risks_list: List[Dict
                     logger.warning(f"RiskFactor '{factor_name}' not found. Skipping.")
 
         for mit in r_data.get("mitigation_handling", []):
-            session.add(Mitigation(risk_id=risk_obj.risk_id, action=mit.get("action"), status=mit.get("status")))
+            if isinstance(mit, dict):
+                action, status = mit.get("action"), mit.get("status")
+            else:
+                action, status = str(mit), None
+            session.add(Mitigation(risk_id=risk_obj.risk_id, action=action, status=status))
 
         desc_raw = r_data.get("description", [])
         if isinstance(desc_raw, list):
             for t in desc_raw:
-                session.add(Impact(risk_id=risk_obj.risk_id, description=str(t)))
+                session.add(Impact(risk_id=risk_obj.risk_id, description=str(t), kind="description"))
         elif desc_raw:
-            session.add(Impact(risk_id=risk_obj.risk_id, description=str(desc_raw)))
+            session.add(Impact(risk_id=risk_obj.risk_id, description=str(desc_raw), kind="description"))
 
         impact_raw = r_data.get("impact_statement", [])
         if isinstance(impact_raw, list):
             for t in impact_raw:
-                session.add(Impact(risk_id=risk_obj.risk_id, description=str(t)))
+                session.add(Impact(risk_id=risk_obj.risk_id, description=str(t), kind="impact"))
         elif impact_raw:
-            session.add(Impact(risk_id=risk_obj.risk_id, description=str(impact_raw)))
+            session.add(Impact(risk_id=risk_obj.risk_id, description=str(impact_raw), kind="impact"))
 
 
 # ===========================================================================
@@ -651,28 +655,54 @@ def create_project_data(
     # Additional Classifications
     for ac in project_data.get("additionalClassifications", []):
         scheme = ac.get("scheme")
-        code = ac.get("id") or ac.get("code") or ac.get("description")
-        if not scheme or not code:
+        if not scheme:
             continue
 
-        # Find classification by both scheme and code to prevent overwriting
-        ac_stmt = select(AdditionalClassification).where(
-            AdditionalClassification.scheme == scheme,
-            AdditionalClassification.code == code
-        )
-        ac_obj = session.exec(ac_stmt).first()
+        ac_obj = None
+        raw_id = ac.get("id")
 
+        # 1. Numeric id → look up by DB primary key (reference endpoint sends id as int)
+        if isinstance(raw_id, int):
+            ac_obj = session.get(AdditionalClassification, raw_id)
+            if ac_obj and ac_obj.scheme != scheme:
+                ac_obj = None  # wrong scheme, ignore
+
+        # 2. String id/code → look up by code
         if not ac_obj:
+            code = (str(raw_id) if raw_id and not isinstance(raw_id, int) else None) or ac.get("code")
+            if code:
+                ac_obj = session.exec(
+                    select(AdditionalClassification).where(
+                        AdditionalClassification.scheme == scheme,
+                        AdditionalClassification.code == code,
+                    )
+                ).first()
+
+        # 3. Fallback: look up by description
+        if not ac_obj:
+            desc = ac.get("description")
+            if desc:
+                ac_obj = session.exec(
+                    select(AdditionalClassification).where(
+                        AdditionalClassification.scheme == scheme,
+                        AdditionalClassification.description == desc,
+                    )
+                ).first()
+
+        # 4. Create only when an explicit string code is provided (never create from numeric id)
+        if not ac_obj:
+            code = ac.get("code") or (str(raw_id) if raw_id and not isinstance(raw_id, int) else None)
+            if not code:
+                continue
             ac_obj = AdditionalClassification(
                 scheme=scheme,
                 code=code,
-                description=ac.get("description")
+                description=ac.get("description"),
             )
             session.add(ac_obj)
             session.flush()
             session.refresh(ac_obj)
         else:
-            # Update description if it changed
             if ac.get("description") and ac_obj.description != ac.get("description"):
                 ac_obj.description = ac.get("description")
                 session.add(ac_obj)

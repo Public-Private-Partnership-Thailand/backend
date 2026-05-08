@@ -20,4 +20,4 @@ RUN pip install --no-cache-dir -e .
 EXPOSE 8000
 
 # Command to run (can be overridden)
-CMD ["uvicorn", "oc4ids_datastore_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "python scripts/migrate.py && uvicorn oc4ids_datastore_api.main:app --host 0.0.0.0 --port 8000"]

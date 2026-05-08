@@ -106,6 +106,7 @@ class Impact(SQLModel, table=True):
     __tablename__ = "impact"
     impact_id: Optional[int] = Field(default=None, primary_key=True)
     description: Optional[str] = None
+    kind: str = Field(default="impact")  # "impact" or "description"
     risk_id: int = Field(foreign_key="risk.risk_id")
 
     # Relationships

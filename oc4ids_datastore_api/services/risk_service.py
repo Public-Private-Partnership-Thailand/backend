@@ -12,7 +12,7 @@ from sqlalchemy import func, exists
 
 from oc4ids_datastore_api.models import (
     RiskCategory, RiskFactor, RiskPhase, RiskPattern, RiskSource,
-    Risk, RiskCategoryAssignment, RiskFactorAssignment,
+    Risk, RiskCategoryAssignment, RiskFactorAssignment, CategoryFactorLink,
     Sector, ProjectSectorLink, Project, Mitigation, Impact,
 )
 
@@ -148,27 +148,33 @@ def get_risk_analysis(session: Session, sector_ids: Optional[List[int]] = None) 
     # ------------------------------------------------------------------ #
     # Build riskSectorWithProject
     # ------------------------------------------------------------------ #
+
+    # Query 1: one row per (sector, project, risk) — no category/factor join to avoid cartesian product.
+    # func.min picks one representative impact/mitigation per risk.
+    RCAlias3 = aliased(RiskCategoryAssignment)
+    RFAlias3 = aliased(RiskFactorAssignment)
+    ImpactAlias = aliased(Impact)
+    MitigationAlias = aliased(Mitigation)
+
     risk_project_stmt = (
         select(
             SectorAlias.code.label("sector"),
             Project.id.label("projectId"),
             Project.title.label("projectName"),
+            Risk.risk_id.label("risk_id"),
             Risk.title.label("problem"),
             Risk.phase.label("phase"),
-            Impact.description.label("riskImpact"),
-            Mitigation.action.label("riskResponse"),
-            RCAlias.risk_category_id,
-            RFAlias.risk_factor_id,
+            func.min(ImpactAlias.description).label("riskImpact"),
+            func.min(MitigationAlias.action).label("riskResponse"),
         )
         .select_from(Project)
         .join(ProjectSectorLink, Project.id == ProjectSectorLink.project_id)
         .join(SectorAlias, ProjectSectorLink.sector_id == SectorAlias.id)
         .join(Risk, Project.id == Risk.project_id)
-        .join(RCAlias, Risk.risk_id == RCAlias.risk_id)
-        .join(RFAlias, Risk.risk_id == RFAlias.risk_id)
-        .outerjoin(Impact, Risk.risk_id == Impact.risk_id)
-        .outerjoin(Mitigation, Risk.risk_id == Mitigation.risk_id)
+        .outerjoin(ImpactAlias, (Risk.risk_id == ImpactAlias.risk_id) & (ImpactAlias.kind == "description"))
+        .outerjoin(MitigationAlias, Risk.risk_id == MitigationAlias.risk_id)
         .where(Project.deleted_at.is_(None))
+        .group_by(SectorAlias.code, Project.id, Project.title, Risk.risk_id, Risk.title, Risk.phase)
     )
 
     if sector_ids:
@@ -176,11 +182,37 @@ def get_risk_analysis(session: Session, sector_ids: Optional[List[int]] = None) 
 
     risk_project_results = session.exec(risk_project_stmt).all()
 
+    # Query 2: for each risk, get category→[factors] using CategoryFactorLink
+    # to ensure factors are correctly paired with their category.
+    cat_factor_stmt = (
+        select(
+            RCAlias3.risk_id,
+            RCAlias3.risk_category_id,
+            RFAlias3.risk_factor_id,
+        )
+        .join(RFAlias3, RFAlias3.risk_id == RCAlias3.risk_id)
+        .join(
+            CategoryFactorLink,
+            (CategoryFactorLink.risk_category_id == RCAlias3.risk_category_id) &
+            (CategoryFactorLink.risk_factor_id == RFAlias3.risk_factor_id),
+        )
+    )
+    cat_factor_results = session.exec(cat_factor_stmt).all()
+
+    # Build: risk_id → {category_id: [factor_ids]}
+    risk_cat_factors: dict = defaultdict(lambda: defaultdict(list))
+    for r_id, cat_id, fac_id in cat_factor_results:
+        if fac_id not in risk_cat_factors[r_id][cat_id]:
+            risk_cat_factors[r_id][cat_id].append(fac_id)
+
     sector_grouped_projects: dict = defaultdict(list)
-    sector_risk_count: dict = defaultdict(int)
 
     for row in risk_project_results:
         s_code = row.sector
+        risks_nested = [
+            {"riskCategoryId": cat_id, "riskFactorId": fac_ids}
+            for cat_id, fac_ids in risk_cat_factors.get(row.risk_id, {}).items()
+        ]
         sector_grouped_projects[s_code].append({
             "projectId": str(row.projectId),
             "projectName": row.projectName,
@@ -188,8 +220,7 @@ def get_risk_analysis(session: Session, sector_ids: Optional[List[int]] = None) 
             "riskImpact": row.riskImpact,
             "riskResponse": row.riskResponse,
             "phase": row.phase,
-            "riskCategoryId": row.risk_category_id,
-            "riskFactorId": row.risk_factor_id,
+            "risks": risks_nested,
         })
     
     # Calculate riskCount per sector

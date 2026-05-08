@@ -261,6 +261,9 @@ def _serialize_risk(risk) -> Dict[str, Any]:
         "title": risk.title,
         "phase": risk.phase,
         "category_drivers": category_drivers,
+        "description": [
+            imp.description for imp in risk.impacts if imp.kind == "description"
+        ],
         "mitigation_handling": [
             {
                 "action": mit.action,
@@ -269,7 +272,7 @@ def _serialize_risk(risk) -> Dict[str, Any]:
             for mit in risk.mitigations
         ],
         "impact_statement": [
-            imp.description for imp in risk.impacts
+            imp.description for imp in risk.impacts if imp.kind != "description"
         ]
     }
 
