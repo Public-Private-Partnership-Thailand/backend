@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from sqlalchemy import text
 import logging
 import os
 
@@ -34,6 +35,10 @@ tags_metadata = [
     {
         "name": "Reference Data",
         "description": "ข้อมูลอ้างอิง (lookup) สำหรับ dropdown และ filter — กลุ่มธุรกิจ กระทรวง ประเภทสัญญา ความเสี่ยง ฯลฯ",
+    },
+    {
+        "name": "Health",
+        "description": "Liveness / readiness probes สำหรับ container orchestrator และ load balancer",
     },
 ]
 
@@ -116,3 +121,34 @@ app.add_middleware(
 
 # Include Router with Versioning
 app.include_router(router, prefix="/api/v1")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Health Probes
+# ──────────────────────────────────────────────────────────────────────────────
+@app.get(
+    "/health",
+    tags=["Health"],
+    summary="Liveness probe",
+    description="Returns 200 if the API process is alive. Does not touch the database.",
+)
+def health_check():
+    return {"status": "ok"}
+
+
+@app.get(
+    "/health/ready",
+    tags=["Health"],
+    summary="Readiness probe (verifies DB connectivity)",
+    description="Returns 200 with `db: ok` when the API can reach Postgres, otherwise 503.",
+)
+def readiness_check():
+    from oc4ids_datastore_api.database import engine
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception:
+        logger.exception("Readiness check failed: database unreachable")
+        raise HTTPException(status_code=503, detail="Database unreachable")
+    return {"status": "ok", "db": "ok"}
