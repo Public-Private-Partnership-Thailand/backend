@@ -21,11 +21,12 @@ from oc4ids_datastore_api.services.project_service import (
 from oc4ids_datastore_api.schemas.project import (
     ProjectListResponse,
     ProjectDetailResponse,
+    ProjectUpsertRequest,
     CreateProjectResponse,
     UpdateProjectResponse,
     DeleteProjectResponse,
 )
-from oc4ids_datastore_api.schemas.common import ErrorDetail
+from oc4ids_datastore_api.schemas.common import ErrorDetail, ValidationErrorResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -137,14 +138,14 @@ def read_project(
     response_description="ข้อมูลโครงการที่สร้างสำเร็จ",
     responses={
         200: {"description": "สร้างโครงการสำเร็จ"},
-        400: {"description": "ข้อมูลไม่ถูกต้อง", "model": ErrorDetail},
+        422: {"description": "ข้อมูลไม่ถูกต้อง / ขาด field ที่จำเป็น", "model": ValidationErrorResponse},
     },
 )
 def create_project(
-    project_data: Dict[str, Any] = Body(...),
+    project_data: ProjectUpsertRequest = Body(...),
     session: Session = Depends(get_session),
 ):
-    return create_project_data(project_data, session)
+    return create_project_data(project_data.model_dump(exclude_none=True), session)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -159,15 +160,15 @@ def create_project(
     responses={
         200: {"description": "อัปเดตสำเร็จ"},
         404: {"description": "ไม่พบโครงการ", "model": ErrorDetail},
-        400: {"description": "ข้อมูลไม่ถูกต้อง", "model": ErrorDetail},
+        422: {"description": "ข้อมูลไม่ถูกต้อง / ขาด field ที่จำเป็น", "model": ValidationErrorResponse},
     },
 )
 def update_project(
     project_id: str,
-    project_data: Dict[str, Any] = Body(..., description="ข้อมูลโครงการใหม่ทั้งหมด (OC4IDS JSON)"),
+    project_data: ProjectUpsertRequest = Body(..., description="ข้อมูลโครงการใหม่ทั้งหมด (OC4IDS JSON)"),
     session: Session = Depends(get_session),
 ):
-    return update_project_data(project_id, project_data, session)
+    return update_project_data(project_id, project_data.model_dump(exclude_none=True), session)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

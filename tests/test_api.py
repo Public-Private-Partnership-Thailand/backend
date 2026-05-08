@@ -152,10 +152,13 @@ def test_risk_analysis_api(client: TestClient):
     assert "sectorMinistryHeatmap" in data
 
 def test_validation_error_missing_mandatory(client: TestClient):
-    # Missing type, publicAuthority, and parties
+    # Missing required `type` — Pydantic should reject before reaching the service
     payload = {"title": "Incomplete"}
     response = client.post("/api/v1/projects/", json=payload)
-    
-    # We expect HTTP 400 Bad Request due to custom business validation logic
-    assert response.status_code == 400
-    assert "Missing mandatory fields:" in response.json()["detail"]
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "VALIDATION_ERROR"
+    # The validation envelope from oc4ids_datastore_api/exceptions.py
+    missing_fields = {err["loc"][-1] for err in body["details"] if err["type"] == "missing"}
+    assert "type" in missing_fields

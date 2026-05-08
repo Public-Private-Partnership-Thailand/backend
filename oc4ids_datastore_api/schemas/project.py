@@ -458,7 +458,72 @@ class ProjectDetailResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# POST /projects — Create / PUT — Update / DELETE
+# POST /projects — Create / PUT — Update (request body)
+# ---------------------------------------------------------------------------
+
+class ProjectUpsertPublicAuthority(BaseModel):
+    """Public authority info inside an upsert payload."""
+    name: Optional[str] = Field(None, description="Public authority name (looked up against the agency reference table)")
+
+    model_config = {"extra": "allow"}
+
+
+class ProjectUpsertRequest(BaseModel):
+    """
+    Request body for POST /projects and PUT /projects/{id}.
+
+    Validates the small set of fields the service unconditionally reads
+    (so a missing `type` returns 422 instead of a 500 KeyError) while
+    leaving the rest of the OC4IDS payload (~50 nested sections) untyped
+    via `extra=allow`. Documented optional fields are surfaced in the
+    OpenAPI spec as a hint to API consumers.
+    """
+
+    id: Optional[str] = Field(
+        None,
+        description="Project UUID. If invalid or omitted, the server generates one.",
+        examples=["a1b2c3d4-e5f6-7890-abcd-ef1234567890"],
+    )
+    title: str = Field(
+        ...,
+        min_length=1,
+        description="Project title (required).",
+        examples=["โครงการทางหลวงพิเศษระหว่างเมือง สาย กรุงเทพ–นครราชสีมา"],
+    )
+    type: str = Field(
+        ...,
+        min_length=1,
+        description="Project type code (required). Looked up against the project_type reference table; created on the fly if unseen.",
+        examples=["หมวดการขนส่ง"],
+    )
+    description: Optional[str] = Field(None, description="Free-text project description")
+    status: Optional[str] = Field(None, description="Project status", examples=["planned", "inProgress", "completed"])
+    purpose: Optional[str] = None
+
+    publicAuthority: Optional[ProjectUpsertPublicAuthority] = Field(
+        None,
+        description="Government agency that owns the project. Auto-resolved to a ministry when the name matches.",
+    )
+    period: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Overall project period (`startDate`, `endDate`, `durationInDays`).",
+    )
+    sector: Optional[List[Any]] = Field(
+        None,
+        description="List of sector codes (string) or `{id: code}` objects. Unknown codes are logged and skipped.",
+    )
+    parties: Optional[List[Dict[str, Any]]] = Field(None, description="OC4IDS parties array")
+    budget: Optional[Dict[str, Any]] = Field(None, description="OC4IDS budget object")
+    contractingProcesses: Optional[List[Dict[str, Any]]] = Field(None, description="OC4IDS contracting processes")
+    risks: Optional[List[Dict[str, Any]]] = Field(None, description="Risk register entries")
+
+    # Allow any other OC4IDS field (locations, documents, identifiers, etc.)
+    # without requiring a typed model for each — the service layer handles them.
+    model_config = {"extra": "allow"}
+
+
+# ---------------------------------------------------------------------------
+# POST /projects — Create / PUT — Update / DELETE (responses)
 # ---------------------------------------------------------------------------
 
 class CreateProjectResponse(BaseModel):

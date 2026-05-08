@@ -4,6 +4,7 @@ from oc4ids_datastore_api.schemas.project import (
     ProjectListItem,
     ProjectListResponse,
     ProjectDetailResponse,
+    ProjectUpsertRequest,
     CreateProjectResponse,
     UpdateProjectResponse,
     DeleteProjectResponse,
@@ -45,6 +46,7 @@ from oc4ids_datastore_api.schemas.common import (
 
 __all__ = [
     "ProjectListItem", "ProjectListResponse", "ProjectDetailResponse",
+    "ProjectUpsertRequest",
     "CreateProjectResponse", "UpdateProjectResponse", "DeleteProjectResponse",
     "UploadResultItem", "UploadResponse",
     "DashboardSummaryResponse", "SummaryStatsResponse", "MinistryStatResponse",
