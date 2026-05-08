@@ -2,9 +2,15 @@
 Reference Data Service — Business Logic
 
 Fetches lookup / master data for dropdowns and filters.
+
+The /info payload is queried by the frontend on every page load and
+combines 9 reference tables. The data only changes when init_refs.py
+or import scripts are re-run, so the result is cached in-process with
+a short TTL — call invalidate_reference_cache() after a manual reseed.
 """
 
-from typing import Any, Dict
+import time
+from typing import Any, Dict, Optional
 from sqlmodel import Session
 
 from oc4ids_datastore_api.repositories.reference_repository import ReferenceRepository
@@ -12,6 +18,18 @@ from oc4ids_datastore_api.repositories.reference_repository import ReferenceRepo
 
 _PPP_CANONICAL = {"PPP Net Cost", "PPP Gross Cost"}
 CONCESSION_OTHER_SENTINEL = 0
+
+# In-process TTL cache for the /info payload.
+REFERENCE_CACHE_TTL_SECONDS: float = 300.0
+_cached_payload: Optional[Dict[str, Any]] = None
+_cached_at: float = 0.0
+
+
+def invalidate_reference_cache() -> None:
+    """Drop the cached /info payload. Call after reseeding reference tables."""
+    global _cached_payload, _cached_at
+    _cached_payload = None
+    _cached_at = 0.0
 
 
 def _build_concession_form_options(all_forms) -> list:
@@ -26,7 +44,20 @@ def _build_concession_form_options(all_forms) -> list:
 
 
 def get_reference_info(session: Session) -> Dict[str, Any]:
-    """Fetch all reference/lookup data for dropdowns and filters."""
+    """Fetch all reference/lookup data for dropdowns and filters (cached)."""
+    global _cached_payload, _cached_at
+    now = time.monotonic()
+    if _cached_payload is not None and (now - _cached_at) < REFERENCE_CACHE_TTL_SECONDS:
+        return _cached_payload
+
+    payload = _query_reference_info(session)
+    _cached_payload = payload
+    _cached_at = now
+    return payload
+
+
+def _query_reference_info(session: Session) -> Dict[str, Any]:
+    """Run the actual queries against the DB. Always called on cache miss."""
     dao = ReferenceRepository(session)
 
     sectors = dao.get_sectors()

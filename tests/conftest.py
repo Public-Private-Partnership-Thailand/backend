@@ -23,15 +23,24 @@ except Exception as e:
 from oc4ids_datastore_api.main import app
 from oc4ids_datastore_api.database import get_session
 
+@pytest.fixture(autouse=True)
+def _reset_in_process_caches():
+    """Reset in-process caches between tests so state doesn't leak across them."""
+    from oc4ids_datastore_api.services.reference_service import invalidate_reference_cache
+    invalidate_reference_cache()
+    yield
+    invalidate_reference_cache()
+
+
 @pytest.fixture(name="session", scope="function")
 def session_fixture() -> Generator[Session, None, None]:
     """สร้าง Session ใหม่พร้อมฐานข้อมูลจำลองสำหรับแต่ละ Test case"""
     engine = create_engine(TEST_DB_URL)
-    
+
     # พักตารางก่อนเริ่มทำงานเพื่อให้เป็น Clean state
     SQLModel.metadata.drop_all(engine)
     SQLModel.metadata.create_all(engine)
-    
+
     with Session(engine) as session:
         yield session
 

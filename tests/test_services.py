@@ -255,3 +255,31 @@ def test_delete_project_data_not_found_raises_404(session: Session):
     with pytest.raises(HTTPException) as exc_info:
         delete_project_data(str(uuid.uuid4()), session)
     assert exc_info.value.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Reference data TTL cache
+# ---------------------------------------------------------------------------
+
+def test_reference_info_cache_hits_on_second_call(session: Session):
+    from oc4ids_datastore_api.services.reference_service import (
+        get_reference_info,
+        invalidate_reference_cache,
+    )
+
+    # First call populates the cache
+    first = get_reference_info(session)
+    initial_sector_count = len(first["sector"])
+
+    # Mutate the DB *after* the cache is warm — second call must NOT see it
+    session.add(Sector(code="LATE-INSERT", name_th="ทดสอบ", category="infrastructure"))
+    session.commit()
+
+    cached = get_reference_info(session)
+    assert len(cached["sector"]) == initial_sector_count
+    assert cached is first  # same object — confirms cache hit, not just equal contents
+
+    # After explicit invalidation we requery and the new row appears
+    invalidate_reference_cache()
+    fresh = get_reference_info(session)
+    assert len(fresh["sector"]) == initial_sector_count + 1
