@@ -9,7 +9,7 @@ Repository pattern nomenclature.
 from typing import List, Optional
 import uuid
 from sqlmodel import Session, select, func, or_, distinct
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy import exists
 
 from oc4ids_datastore_api.models import (
@@ -27,6 +27,40 @@ ProjectDAO = None  # set at bottom of file
 _PPP_CANONICAL = {"PPP Net Cost", "PPP Gross Cost"}
 _CONCESSION_SCHEME = "รูปแบบสัมปทานหรือค่าตอบแทน"
 CONCESSION_OTHER_SENTINEL = 0
+
+
+def _project_eager_load_options():
+    """Eager-load all top-level Project relationships used by the serializer.
+
+    Without this, serializing a Project triggers ~20+ lazy-load queries per
+    project (one per relationship). selectinload issues one SELECT...IN per
+    relationship instead, regardless of how many parent rows are loaded.
+    """
+    return (
+        selectinload(Project.project_type),
+        selectinload(Project.public_authority),
+        selectinload(Project.identifiers_list),
+        selectinload(Project.periods),
+        selectinload(Project.locations_list),
+        selectinload(Project.documents_list),
+        selectinload(Project.budget),
+        selectinload(Project.parties_list),
+        selectinload(Project.contracting_processes),
+        selectinload(Project.related_projects),
+        selectinload(Project.cost_measurements),
+        selectinload(Project.forecasts),
+        selectinload(Project.metrics),
+        selectinload(Project.social),
+        selectinload(Project.environment),
+        selectinload(Project.benefits),
+        selectinload(Project.completion),
+        selectinload(Project.lobbying_meetings),
+        selectinload(Project.policy_alignment),
+        selectinload(Project.asset_lifetime),
+        selectinload(Project.risks),
+        selectinload(Project.sectors),
+        selectinload(Project.additional_classifications),
+    )
 
 
 class ProjectRepository:
@@ -57,20 +91,117 @@ class ProjectRepository:
         return list(set(explicit + other_ids))
 
     # ------------------------------------------------------------------ #
+    # Shared filter logic
+    # ------------------------------------------------------------------ #
+
+    def _apply_project_filters(
+        self,
+        id_query,
+        *,
+        title: Optional[str] = None,
+        sector_id: Optional[List[int]] = None,
+        ministry_id: Optional[List[int]] = None,
+        agency_id: Optional[List[int]] = None,
+        concession_form_id: Optional[List[int]] = None,
+        contract_type_id: Optional[List[int]] = None,
+        risk_category_id: Optional[List[int]] = None,
+        risk_factor_id: Optional[List[int]] = None,
+        year_from: Optional[int] = None,
+        year_to: Optional[int] = None,
+    ):
+        """
+        Apply project filters to a query that selects from Project.
+        Returns (query, period_alias, period_joined) so callers can reuse
+        period_alias for ordering and know whether the period join was added.
+        """
+        period_alias = aliased(ProjectPeriod)
+        sector_link_alias = aliased(ProjectSectorLink)
+        concession_link_alias = aliased(ProjectAdditionalClassificationLink)
+        public_authority_alias = aliased(Agency)
+        period_joined = False
+
+        if title:
+            id_query = id_query.where(Project.title.ilike(f"%{title}%"))
+
+        if sector_id:
+            id_query = id_query.join(sector_link_alias, Project.id == sector_link_alias.project_id)
+            id_query = id_query.where(sector_link_alias.sector_id.in_(sector_id))
+
+        if ministry_id:
+            id_query = id_query.join(public_authority_alias, Project.public_authority_id == public_authority_alias.id, isouter=True)
+            party_ministry_alias = aliased(Ministry)
+            party_identifier_alias = aliased(PartyAdditionalIdentifier)
+            project_party_alias = aliased(ProjectParty)
+            id_query = id_query.outerjoin(project_party_alias, Project.id == project_party_alias.project_id)
+            id_query = id_query.outerjoin(party_identifier_alias, project_party_alias.id == party_identifier_alias.party_id)
+            id_query = id_query.outerjoin(party_ministry_alias, party_identifier_alias.legal_name_id == party_ministry_alias.id)
+            id_query = id_query.where(
+                or_(
+                    party_ministry_alias.id.in_(ministry_id),
+                    public_authority_alias.ministry_id.in_(ministry_id),
+                )
+            )
+
+        if agency_id:
+            id_query = id_query.where(Project.public_authority_id.in_(agency_id))
+
+        if concession_form_id:
+            resolved = self._resolve_concession_ids(concession_form_id)
+            id_query = id_query.join(concession_link_alias, Project.id == concession_link_alias.project_id)
+            id_query = id_query.where(concession_link_alias.classification_id.in_(resolved))
+
+        if contract_type_id:
+            contract_link_alias = aliased(ProjectAdditionalClassificationLink)
+            id_query = id_query.join(contract_link_alias, Project.id == contract_link_alias.project_id)
+            id_query = id_query.where(contract_link_alias.classification_id.in_(contract_type_id))
+
+        if risk_category_id or risk_factor_id:
+            risk_alias = aliased(Risk)
+            id_query = id_query.join(risk_alias, Project.id == risk_alias.project_id)
+            if risk_category_id:
+                risk_cat_alias = aliased(RiskCategoryAssignment)
+                id_query = id_query.join(risk_cat_alias, risk_alias.risk_id == risk_cat_alias.risk_id)
+                id_query = id_query.where(risk_cat_alias.risk_category_id.in_(risk_category_id))
+            if risk_factor_id:
+                risk_factor_alias = aliased(RiskFactorAssignment)
+                id_query = id_query.join(risk_factor_alias, risk_alias.risk_id == risk_factor_alias.risk_id)
+                id_query = id_query.where(risk_factor_alias.risk_factor_id.in_(risk_factor_id))
+
+        if year_from or year_to:
+            id_query = id_query.join(
+                period_alias,
+                (Project.id == period_alias.project_id) & (period_alias.period_type == "duration"),
+            )
+            period_joined = True
+            if year_from and year_to:
+                id_query = id_query.where(func.extract("year", period_alias.start_date) <= year_to)
+                id_query = id_query.where(func.extract("year", period_alias.end_date) >= year_from)
+            elif year_from:
+                id_query = id_query.where(func.extract("year", period_alias.end_date) >= year_from)
+            elif year_to:
+                id_query = id_query.where(func.extract("year", period_alias.start_date) <= year_to)
+
+        return id_query, period_alias, period_joined
+
+    # ------------------------------------------------------------------ #
     # Basic getters
     # ------------------------------------------------------------------ #
 
     def get_by_id(self, project_id: str) -> Optional[Project]:
-        project = self.session.get(Project, project_id)
-        if project and project.deleted_at:
-            return None
-        return project
+        statement = (
+            select(Project)
+            .where(Project.id == project_id)
+            .where(Project.deleted_at.is_(None))
+            .options(*_project_eager_load_options())
+        )
+        return self.session.exec(statement).first()
 
     def get_by_ids(self, project_ids: List[str]) -> List[Project]:
         statement = (
             select(Project)
             .where(Project.id.in_(project_ids))
             .where(Project.deleted_at.is_(None))
+            .options(*_project_eager_load_options())
         )
         return self.session.exec(statement).all()
 
@@ -94,73 +225,20 @@ class ProjectRepository:
         year_from: Optional[int] = None,
         year_to: Optional[int] = None,
     ) -> int:
-        FilterLastPeriod = aliased(ProjectPeriod)
-        FilterSectorLink = aliased(ProjectSectorLink)
-        FilterLinkConcession = aliased(ProjectAdditionalClassificationLink)
-        FilterAgency = aliased(Agency)
-
         id_query = select(Project.id).where(Project.deleted_at.is_(None))
-
-        if title:
-            id_query = id_query.where(Project.title.ilike(f"%{title}%"))
-
-        if sector_id:
-            id_query = id_query.join(FilterSectorLink, Project.id == FilterSectorLink.project_id)
-            id_query = id_query.where(FilterSectorLink.sector_id.in_(sector_id))
-
-        if ministry_id:
-            id_query = id_query.join(FilterAgency, Project.public_authority_id == FilterAgency.id, isouter=True)
-            PartyMinistryFilter = aliased(Ministry)
-            PartyIdentifierFilter = aliased(PartyAdditionalIdentifier)
-            ProjectPartyFilter = aliased(ProjectParty)
-            id_query = id_query.outerjoin(ProjectPartyFilter, Project.id == ProjectPartyFilter.project_id)
-            id_query = id_query.outerjoin(PartyIdentifierFilter, ProjectPartyFilter.id == PartyIdentifierFilter.party_id)
-            id_query = id_query.outerjoin(PartyMinistryFilter, PartyIdentifierFilter.legal_name_id == PartyMinistryFilter.id)
-            id_query = id_query.where(
-                or_(
-                    PartyMinistryFilter.id.in_(ministry_id),
-                    FilterAgency.ministry_id.in_(ministry_id),
-                )
-            )
-
-        if agency_id:
-            id_query = id_query.where(Project.public_authority_id.in_(agency_id))
-
-        if concession_form_id:
-            resolved = self._resolve_concession_ids(concession_form_id)
-            id_query = id_query.join(FilterLinkConcession, Project.id == FilterLinkConcession.project_id)
-            id_query = id_query.where(FilterLinkConcession.classification_id.in_(resolved))
-
-        if contract_type_id:
-            FilterLinkContract = aliased(ProjectAdditionalClassificationLink)
-            id_query = id_query.join(FilterLinkContract, Project.id == FilterLinkContract.project_id)
-            id_query = id_query.where(FilterLinkContract.classification_id.in_(contract_type_id))
-
-        if risk_category_id or risk_factor_id:
-            FilterRisk = aliased(Risk)
-            id_query = id_query.join(FilterRisk, Project.id == FilterRisk.project_id)
-            if risk_category_id:
-                FilterRiskCatAssign = aliased(RiskCategoryAssignment)
-                id_query = id_query.join(FilterRiskCatAssign, FilterRisk.risk_id == FilterRiskCatAssign.risk_id)
-                id_query = id_query.where(FilterRiskCatAssign.risk_category_id.in_(risk_category_id))
-            if risk_factor_id:
-                FilterRiskFactorAssign = aliased(RiskFactorAssignment)
-                id_query = id_query.join(FilterRiskFactorAssign, FilterRisk.risk_id == FilterRiskFactorAssign.risk_id)
-                id_query = id_query.where(FilterRiskFactorAssign.risk_factor_id.in_(risk_factor_id))
-
-        if year_from or year_to:
-            id_query = id_query.join(
-                FilterLastPeriod,
-                (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == "duration"),
-            )
-            if year_from and year_to:
-                id_query = id_query.where(func.extract("year", FilterLastPeriod.start_date) <= year_to)
-                id_query = id_query.where(func.extract("year", FilterLastPeriod.end_date) >= year_from)
-            elif year_from:
-                id_query = id_query.where(func.extract("year", FilterLastPeriod.end_date) >= year_from)
-            elif year_to:
-                id_query = id_query.where(func.extract("year", FilterLastPeriod.start_date) <= year_to)
-
+        id_query, _, _ = self._apply_project_filters(
+            id_query,
+            title=title,
+            sector_id=sector_id,
+            ministry_id=ministry_id,
+            agency_id=agency_id,
+            concession_form_id=concession_form_id,
+            contract_type_id=contract_type_id,
+            risk_category_id=risk_category_id,
+            risk_factor_id=risk_factor_id,
+            year_from=year_from,
+            year_to=year_to,
+        )
         subq = id_query.distinct().subquery()
         return self.session.exec(select(func.count()).select_from(subq)).one()
 
@@ -184,84 +262,32 @@ class ProjectRepository:
         year_to: Optional[int] = None,
         order_by: Optional[str] = None,
     ):
-        FilterLastPeriod = aliased(ProjectPeriod)
-        FilterSectorLink = aliased(ProjectSectorLink)
-        FilterLinkConcession = aliased(ProjectAdditionalClassificationLink)
-        FilterAgency = aliased(Agency)
-
         id_query = select(Project.id).where(Project.deleted_at.is_(None))
-
-        if title:
-            id_query = id_query.where(Project.title.ilike(f"%{title}%"))
-
-        if sector_id:
-            id_query = id_query.join(FilterSectorLink, Project.id == FilterSectorLink.project_id)
-            id_query = id_query.where(FilterSectorLink.sector_id.in_(sector_id))
-
-        if ministry_id:
-            id_query = id_query.join(FilterAgency, Project.public_authority_id == FilterAgency.id, isouter=True)
-            PartyMinistryFilter = aliased(Ministry)
-            PartyIdentifierFilter = aliased(PartyAdditionalIdentifier)
-            ProjectPartyFilter = aliased(ProjectParty)
-            id_query = id_query.outerjoin(ProjectPartyFilter, Project.id == ProjectPartyFilter.project_id)
-            id_query = id_query.outerjoin(PartyIdentifierFilter, ProjectPartyFilter.id == PartyIdentifierFilter.party_id)
-            id_query = id_query.outerjoin(PartyMinistryFilter, PartyIdentifierFilter.legal_name_id == PartyMinistryFilter.id)
-            id_query = id_query.where(
-                or_(
-                    PartyMinistryFilter.id.in_(ministry_id),
-                    FilterAgency.ministry_id.in_(ministry_id),
-                )
-            )
-
-        if agency_id:
-            id_query = id_query.where(Project.public_authority_id.in_(agency_id))
-
-        if concession_form_id:
-            resolved = self._resolve_concession_ids(concession_form_id)
-            id_query = id_query.join(FilterLinkConcession, Project.id == FilterLinkConcession.project_id)
-            id_query = id_query.where(FilterLinkConcession.classification_id.in_(resolved))
-
-        if contract_type_id:
-            FilterLinkContract = aliased(ProjectAdditionalClassificationLink)
-            id_query = id_query.join(FilterLinkContract, Project.id == FilterLinkContract.project_id)
-            id_query = id_query.where(FilterLinkContract.classification_id.in_(contract_type_id))
-
-        if risk_category_id or risk_factor_id:
-            FilterRisk = aliased(Risk)
-            id_query = id_query.join(FilterRisk, Project.id == FilterRisk.project_id)
-            if risk_category_id:
-                FilterRiskCatAssign = aliased(RiskCategoryAssignment)
-                id_query = id_query.join(FilterRiskCatAssign, FilterRisk.risk_id == FilterRiskCatAssign.risk_id)
-                id_query = id_query.where(FilterRiskCatAssign.risk_category_id.in_(risk_category_id))
-            if risk_factor_id:
-                FilterRiskFactorAssign = aliased(RiskFactorAssignment)
-                id_query = id_query.join(FilterRiskFactorAssign, FilterRisk.risk_id == FilterRiskFactorAssign.risk_id)
-                id_query = id_query.where(FilterRiskFactorAssign.risk_factor_id.in_(risk_factor_id))
-
-        if year_from or year_to:
-            id_query = id_query.join(
-                FilterLastPeriod,
-                (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == "duration"),
-            )
-            if year_from and year_to:
-                id_query = id_query.where(func.extract("year", FilterLastPeriod.start_date) <= year_to)
-                id_query = id_query.where(func.extract("year", FilterLastPeriod.end_date) >= year_from)
-            elif year_from:
-                id_query = id_query.where(func.extract("year", FilterLastPeriod.end_date) >= year_from)
-            elif year_to:
-                id_query = id_query.where(func.extract("year", FilterLastPeriod.start_date) <= year_to)
+        id_query, period_alias, period_joined = self._apply_project_filters(
+            id_query,
+            title=title,
+            sector_id=sector_id,
+            ministry_id=ministry_id,
+            agency_id=agency_id,
+            concession_form_id=concession_form_id,
+            contract_type_id=contract_type_id,
+            risk_category_id=risk_category_id,
+            risk_factor_id=risk_factor_id,
+            year_from=year_from,
+            year_to=year_to,
+        )
 
         if order_by == "start_date":
-            if not (year_from or year_to):
+            if not period_joined:
                 id_query = id_query.join(
-                    FilterLastPeriod,
-                    (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == "duration"),
+                    period_alias,
+                    (Project.id == period_alias.project_id) & (period_alias.period_type == "duration"),
                     isouter=True,
                 )
             subq = (
-                id_query.add_columns(FilterLastPeriod.start_date)
+                id_query.add_columns(period_alias.start_date)
                 .distinct()
-                .order_by(FilterLastPeriod.start_date.desc().nullslast())
+                .order_by(period_alias.start_date.desc().nullslast())
                 .offset(skip)
                 .limit(limit)
                 .subquery()
@@ -383,67 +409,22 @@ class ProjectRepository:
         year_from: Optional[int] = None,
         year_to: Optional[int] = None,
     ) -> dict:
-        from sqlalchemy import func, case, and_, or_
-
-        FilterLastPeriod = aliased(ProjectPeriod)
-        FilterSectorLink = aliased(ProjectSectorLink)
-        FilterLinkConcession = aliased(ProjectAdditionalClassificationLink)
-        FilterAgency = aliased(Agency)
+        from sqlalchemy import func, case, and_
 
         id_query = select(Project.id).where(Project.deleted_at.is_(None))
-
-        if title:
-            id_query = id_query.where(Project.title.ilike(f"%{title}%"))
-        if sector_id:
-            id_query = id_query.join(FilterSectorLink, Project.id == FilterSectorLink.project_id)
-            id_query = id_query.where(FilterSectorLink.sector_id.in_(sector_id))
-        if ministry_id:
-            id_query = id_query.join(FilterAgency, Project.public_authority_id == FilterAgency.id, isouter=True)
-            PartyMinistryFilter = aliased(Ministry)
-            PartyIdentifierFilter = aliased(PartyAdditionalIdentifier)
-            ProjectPartyFilter = aliased(ProjectParty)
-            id_query = id_query.outerjoin(ProjectPartyFilter, Project.id == ProjectPartyFilter.project_id)
-            id_query = id_query.outerjoin(PartyIdentifierFilter, ProjectPartyFilter.id == PartyIdentifierFilter.party_id)
-            id_query = id_query.outerjoin(PartyMinistryFilter, PartyIdentifierFilter.legal_name_id == PartyMinistryFilter.id)
-            id_query = id_query.where(
-                or_(
-                    PartyMinistryFilter.id.in_(ministry_id),
-                    FilterAgency.ministry_id.in_(ministry_id),
-                )
-            )
-        if agency_id:
-            id_query = id_query.where(Project.public_authority_id.in_(agency_id))
-        if concession_form_id:
-            resolved = self._resolve_concession_ids(concession_form_id)
-            id_query = id_query.join(FilterLinkConcession, Project.id == FilterLinkConcession.project_id)
-            id_query = id_query.where(FilterLinkConcession.classification_id.in_(resolved))
-        if contract_type_id:
-            FilterLinkContract = aliased(ProjectAdditionalClassificationLink)
-            id_query = id_query.join(FilterLinkContract, Project.id == FilterLinkContract.project_id)
-            id_query = id_query.where(FilterLinkContract.classification_id.in_(contract_type_id))
-        if risk_category_id or risk_factor_id:
-            FilterRisk = aliased(Risk)
-            id_query = id_query.join(FilterRisk, Project.id == FilterRisk.project_id)
-            if risk_category_id:
-                FilterRiskCatAssign = aliased(RiskCategoryAssignment)
-                id_query = id_query.join(FilterRiskCatAssign, FilterRisk.risk_id == FilterRiskCatAssign.risk_id)
-                id_query = id_query.where(FilterRiskCatAssign.risk_category_id.in_(risk_category_id))
-            if risk_factor_id:
-                FilterRiskFactorAssign = aliased(RiskFactorAssignment)
-                id_query = id_query.join(FilterRiskFactorAssign, FilterRisk.risk_id == FilterRiskFactorAssign.risk_id)
-                id_query = id_query.where(FilterRiskFactorAssign.risk_factor_id.in_(risk_factor_id))
-        if year_from or year_to:
-            id_query = id_query.join(
-                FilterLastPeriod,
-                (Project.id == FilterLastPeriod.project_id) & (FilterLastPeriod.period_type == "duration"),
-            )
-            if year_from and year_to:
-                id_query = id_query.where(func.extract("year", FilterLastPeriod.start_date) <= year_to)
-                id_query = id_query.where(func.extract("year", FilterLastPeriod.end_date) >= year_from)
-            elif year_from:
-                id_query = id_query.where(func.extract("year", FilterLastPeriod.end_date) >= year_from)
-            elif year_to:
-                id_query = id_query.where(func.extract("year", FilterLastPeriod.start_date) <= year_to)
+        id_query, _, _ = self._apply_project_filters(
+            id_query,
+            title=title,
+            sector_id=sector_id,
+            ministry_id=ministry_id,
+            agency_id=agency_id,
+            concession_form_id=concession_form_id,
+            contract_type_id=contract_type_id,
+            risk_category_id=risk_category_id,
+            risk_factor_id=risk_factor_id,
+            year_from=year_from,
+            year_to=year_to,
+        )
 
         filtered_project_ids = id_query.distinct().subquery()
         total_projects = self.session.exec(select(func.count()).select_from(filtered_project_ids)).one()

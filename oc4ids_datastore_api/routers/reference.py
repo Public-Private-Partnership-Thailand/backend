@@ -66,16 +66,20 @@ def download_risk_source_reference(
         raise HTTPException(status_code=404, detail=f"Risk Source ID {rs_id} has no reference file")
 
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    file_path = os.path.join(base_dir, "static", "risk_source_references", risk_source.reference_file)
+    allowed_dir = os.path.realpath(os.path.join(base_dir, "static", "risk_source_references"))
+    safe_name = os.path.basename(risk_source.reference_file)
+    file_path = os.path.realpath(os.path.join(allowed_dir, safe_name))
 
-    if not os.path.isfile(file_path):
-        raise HTTPException(
-            status_code=404,
-            detail=f"Reference file not found on server: {risk_source.reference_file}",
+    if not file_path.startswith(allowed_dir + os.sep) or not os.path.isfile(file_path):
+        logger.warning(
+            "Reference file lookup rejected for risk source %s (file=%r)",
+            rs_id,
+            risk_source.reference_file,
         )
+        raise HTTPException(status_code=404, detail="Reference file not found")
 
     return FileResponse(
         path=file_path,
-        filename=risk_source.reference_file,
+        filename=safe_name,
         media_type="application/octet-stream",
     )
