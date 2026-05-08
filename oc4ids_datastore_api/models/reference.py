@@ -11,6 +11,8 @@ from typing import Optional
 from datetime import datetime
 from sqlmodel import SQLModel, Field
 
+from oc4ids_datastore_api.utils import utcnow_naive
+
 
 # ---------------------------------------------------------------------------
 # Project Type
@@ -35,8 +37,8 @@ class Ministry(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name_th: str
     name_en: Optional[str] = None
-    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    created_at: Optional[datetime] = Field(default_factory=utcnow_naive)
+    updated_at: Optional[datetime] = Field(default_factory=utcnow_naive)
 
 
 class Agency(SQLModel, table=True):
@@ -45,8 +47,8 @@ class Agency(SQLModel, table=True):
     name_th: str
     name_en: Optional[str] = None
     ministry_id: Optional[int] = Field(default=None, foreign_key="ministry.id", index=True)
-    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    created_at: Optional[datetime] = Field(default_factory=utcnow_naive)
+    updated_at: Optional[datetime] = Field(default_factory=utcnow_naive)
 
 
 # ---------------------------------------------------------------------------
@@ -78,8 +80,8 @@ class Sector(SQLModel, table=True):
     category: str
     description: Optional[str] = None
     is_active: bool = Field(default=True)
-    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    created_at: Optional[datetime] = Field(default_factory=utcnow_naive)
+    updated_at: Optional[datetime] = Field(default_factory=utcnow_naive)
 
 
 # ---------------------------------------------------------------------------

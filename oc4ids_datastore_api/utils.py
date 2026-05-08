@@ -1,3 +1,17 @@
+from datetime import datetime, timezone
+
+
+def utcnow_naive() -> datetime:
+    """Tz-naive UTC `datetime` — drop-in for `datetime.utcnow()`.
+
+    `datetime.utcnow()` is deprecated in Python 3.12+. Database columns
+    in this project are tz-naive (`DateTime` without `timezone=True`),
+    so we strip the tzinfo after computing in UTC instead of returning
+    an aware datetime that would fail to bind on insert.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 def format_thai_amount(amount: float) -> str:
     if amount is None:
         return ""

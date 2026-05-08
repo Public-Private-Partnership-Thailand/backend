@@ -13,6 +13,8 @@ from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Column, JSON, Date, String, Float, Integer
 from sqlalchemy.dialects.postgresql import JSONB
 
+from oc4ids_datastore_api.utils import utcnow_naive
+
 from oc4ids_datastore_api.models.reference import (
     Agency, Ministry, Sector, AdditionalClassification,
     ProjectType,
@@ -818,9 +820,9 @@ class Project(SQLModel, table=True):
     project_type_id: Optional[int] = Field(default=None, foreign_key="project_type.id", index=True)
     public_authority_id: Optional[int] = Field(default=None, foreign_key="agency.id", index=True)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow_naive)
     created_by: Optional[uuid.UUID] = None
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=utcnow_naive)
     updated_by: Optional[uuid.UUID] = None
     deleted_at: Optional[datetime] = Field(default=None, index=True)
 

@@ -375,7 +375,7 @@ class ProjectRepository:
         return project
 
     def delete(self, project_id: str, hard_delete: bool = False, auto_commit: bool = True) -> None:
-        from datetime import datetime
+        from oc4ids_datastore_api.utils import utcnow_naive
 
         project = self.session.get(Project, project_id)
         if not project:
@@ -384,7 +384,7 @@ class ProjectRepository:
         if hard_delete:
             self.session.delete(project)
         else:
-            project.deleted_at = datetime.utcnow()
+            project.deleted_at = utcnow_naive()
             self.session.add(project)
 
         if auto_commit:

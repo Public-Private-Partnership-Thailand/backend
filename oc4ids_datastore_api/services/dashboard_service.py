@@ -5,11 +5,10 @@ Aggregates statistics from the Project repository for the dashboard.
 """
 
 from typing import Any, Dict, List, Optional
-from datetime import datetime
 from sqlmodel import Session
 
 from oc4ids_datastore_api.repositories.project_repository import ProjectRepository
-from oc4ids_datastore_api.utils import format_thai_amount
+from oc4ids_datastore_api.utils import format_thai_amount, utcnow_naive
 
 
 def get_dashboard_summary(
@@ -95,7 +94,7 @@ def get_dashboard_summary(
             "budget": {"amount": getattr(p, "budget_amount", 0) or 0},
             "status": getattr(p, "status", None),
             "type": getattr(p, "project_type_name", None),
-            "updated": datetime.utcnow().isoformat(),
+            "updated": utcnow_naive().isoformat(),
             "date": p_date,
         })
 

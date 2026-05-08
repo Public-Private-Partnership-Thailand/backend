@@ -1,4 +1,3 @@
-from datetime import datetime
 import logging
 
 from fastapi import APIRouter
@@ -6,6 +5,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 from starlette.status import HTTP_422_UNPROCESSABLE_CONTENT
+
+from oc4ids_datastore_api.utils import utcnow_naive
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -28,7 +29,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "status": "error",
             "code": "INTERNAL_SERVER_ERROR",
             "message": "An unexpected error occurred.",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": utcnow_naive().isoformat(),
         },
     )
 
