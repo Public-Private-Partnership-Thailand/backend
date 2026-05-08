@@ -79,3 +79,6 @@ coverage.xml
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Claude Code local commands (contains server credentials)
+.claude/
