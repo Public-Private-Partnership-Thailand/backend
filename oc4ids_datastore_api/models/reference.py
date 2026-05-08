@@ -44,7 +44,7 @@ class Agency(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name_th: str
     name_en: Optional[str] = None
-    ministry_id: Optional[int] = Field(default=None, foreign_key="ministry.id")
+    ministry_id: Optional[int] = Field(default=None, foreign_key="ministry.id", index=True)
     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 

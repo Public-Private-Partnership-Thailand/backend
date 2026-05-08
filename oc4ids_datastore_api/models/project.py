@@ -26,13 +26,13 @@ from oc4ids_datastore_api.models.reference import (
 class ProjectSectorLink(SQLModel, table=True):
     __tablename__ = "project_sector"
     project_id: uuid.UUID = Field(foreign_key="projects.id", primary_key=True)
-    sector_id: int = Field(foreign_key="sector.id", primary_key=True)
+    sector_id: int = Field(foreign_key="sector.id", primary_key=True, index=True)
 
 
 class ProjectAdditionalClassificationLink(SQLModel, table=True):
     __tablename__ = "project_additional_classifications"
     project_id: uuid.UUID = Field(foreign_key="projects.id", primary_key=True)
-    classification_id: int = Field(foreign_key="additional_classifications.id", primary_key=True)
+    classification_id: int = Field(foreign_key="additional_classifications.id", primary_key=True, index=True)
 
 
 # ===========================================================================
@@ -51,8 +51,8 @@ class ProjectIdentifier(SQLModel, table=True):
 class ProjectPeriod(SQLModel, table=True):
     __tablename__ = "project_periods"
     id: Optional[int] = Field(default=None, primary_key=True)
-    project_id: uuid.UUID = Field(foreign_key="projects.id")
-    period_type: str = Field(foreign_key="period_types.code")
+    project_id: uuid.UUID = Field(foreign_key="projects.id", index=True)
+    period_type: str = Field(foreign_key="period_types.code", index=True)
     start_date: Optional[datetime] = Field(default=None, sa_column=Column(Date))
     end_date: Optional[datetime] = Field(default=None, sa_column=Column(Date))
     max_extent_date: Optional[datetime] = Field(default=None, sa_column=Column(Date))
@@ -203,12 +203,12 @@ class ProjectFinance(SQLModel, table=True):
 class ProjectParty(SQLModel, table=True):
     __tablename__ = "project_parties"
     id: Optional[int] = Field(default=None, primary_key=True)
-    project_id: uuid.UUID = Field(foreign_key="projects.id")
+    project_id: uuid.UUID = Field(foreign_key="projects.id", index=True)
     local_id: str
     name: Optional[str] = None
     identifier_scheme: Optional[str] = None
     identifier_value: Optional[str] = None
-    identifier_legal_name_id: Optional[int] = Field(default=None, foreign_key="agency.id")
+    identifier_legal_name_id: Optional[int] = Field(default=None, foreign_key="agency.id", index=True)
     agency: Optional["Agency"] = Relationship()
     identifier_uri: Optional[str] = None
     # Address
@@ -236,10 +236,10 @@ class ProjectParty(SQLModel, table=True):
 class PartyAdditionalIdentifier(SQLModel, table=True):
     __tablename__ = "party_additional_identifiers"
     id: Optional[int] = Field(default=None, primary_key=True)
-    party_id: int = Field(foreign_key="project_parties.id")
+    party_id: int = Field(foreign_key="project_parties.id", index=True)
     scheme: Optional[str] = None
     identifier: Optional[str] = None
-    legal_name_id: Optional[int] = Field(default=None, foreign_key="ministry.id")
+    legal_name_id: Optional[int] = Field(default=None, foreign_key="ministry.id", index=True)
     uri: Optional[str] = None
     party: "ProjectParty" = Relationship(back_populates="additional_identifiers")
     ministry: Optional["Ministry"] = Relationship()
@@ -815,14 +815,14 @@ class Project(SQLModel, table=True):
     status: Optional[str] = None
     purpose: Optional[str] = None
 
-    project_type_id: Optional[int] = Field(default=None, foreign_key="project_type.id")
-    public_authority_id: Optional[int] = Field(default=None, foreign_key="agency.id")
+    project_type_id: Optional[int] = Field(default=None, foreign_key="project_type.id", index=True)
+    public_authority_id: Optional[int] = Field(default=None, foreign_key="agency.id", index=True)
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
     created_by: Optional[uuid.UUID] = None
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     updated_by: Optional[uuid.UUID] = None
-    deleted_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = Field(default=None, index=True)
 
     # Relationships
     project_type: Optional["ProjectType"] = Relationship()
