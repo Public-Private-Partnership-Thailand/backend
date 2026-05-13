@@ -4,9 +4,20 @@ Risk Analysis Service — Business Logic
 Builds the risk heatmap and sector/ministry matrix from the DB.
 """
 
+import time
 from collections import defaultdict
 from typing import Any, Dict, List, Optional
 from sqlmodel import Session, select
+
+RISK_CACHE_TTL_SECONDS: float = 300.0
+_cached_risk: Optional[Dict[str, Any]] = None
+_cached_risk_at: float = 0.0
+
+
+def invalidate_risk_cache() -> None:
+    global _cached_risk, _cached_risk_at
+    _cached_risk = None
+    _cached_risk_at = 0.0
 from sqlalchemy.orm import aliased
 from sqlalchemy import func, exists
 
@@ -19,6 +30,11 @@ from oc4ids_datastore_api.models import (
 
 def get_risk_analysis(session: Session, sector_ids: Optional[List[int]] = None) -> Dict[str, Any]:
     """Build risk analysis data: heatmapRiskPhase + sectorMinistryHeatmap + riskSectorWithProject."""
+    global _cached_risk, _cached_risk_at
+
+    now = time.monotonic()
+    if sector_ids is None and _cached_risk is not None and (now - _cached_risk_at) < RISK_CACHE_TTL_SECONDS:
+        return _cached_risk
 
     # ------------------------------------------------------------------ #
     # Load reference data
@@ -251,8 +267,14 @@ def get_risk_analysis(session: Session, sector_ids: Optional[List[int]] = None) 
         for s_code in sector_codes
     ]
 
-    return {
+    result = {
         "heatmapRiskPhase": heatmap,
         "sectorMinistryHeatmap": sector_ministry_heatmap,
         "riskSectorWithProject": risk_sector_with_project,
     }
+
+    if sector_ids is None:
+        _cached_risk = result
+        _cached_risk_at = now
+
+    return result

@@ -4,11 +4,22 @@ Dashboard Service — Business Logic
 Aggregates statistics from the Project repository for the dashboard.
 """
 
+import time
 from typing import Any, Dict, List, Optional
 from sqlmodel import Session
 
 from oc4ids_datastore_api.repositories.project_repository import ProjectRepository
 from oc4ids_datastore_api.utils import format_thai_amount, utcnow_naive
+
+SUMMARY_CACHE_TTL_SECONDS: float = 300.0
+_cached_summary: Optional[Dict[str, Any]] = None
+_cached_summary_at: float = 0.0
+
+
+def invalidate_summary_cache() -> None:
+    global _cached_summary, _cached_summary_at
+    _cached_summary = None
+    _cached_summary_at = 0.0
 
 
 def get_dashboard_summary(
@@ -25,6 +36,17 @@ def get_dashboard_summary(
     search: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build the full dashboard summary payload."""
+    global _cached_summary, _cached_summary_at
+
+    no_filters = not any([
+        sector_id, ministry_id, agency_id, concession_form_id,
+        contract_type_id, risk_category_id, risk_factor_id,
+        year_from, year_to, search,
+    ])
+    now = time.monotonic()
+    if no_filters and _cached_summary is not None and (now - _cached_summary_at) < SUMMARY_CACHE_TTL_SECONDS:
+        return _cached_summary
+
     dao = ProjectRepository(session)
 
     # 1. Get aggregated stats
@@ -223,7 +245,7 @@ def get_dashboard_summary(
             "count": others_count,
         })
 
-    return {
+    result = {
         "summary": {
             "totalProjects": stats["total_projects"],
             "uniqueContractors": stats["unique_contractors"],
@@ -246,3 +268,9 @@ def get_dashboard_summary(
         "pieContractTypeCount": pie_contract_counts,
         "locations": locations_data,
     }
+
+    if no_filters:
+        _cached_summary = result
+        _cached_summary_at = now
+
+    return result
