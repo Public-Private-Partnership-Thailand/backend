@@ -10,6 +10,12 @@ class SectorMinistryHeatmapItem(BaseModel):
     ministryList: List[Dict[str, Any]]
 
 
+class RiskCategoryItem(BaseModel):
+    """One category→factors entry within a project risk"""
+    riskCategoryId: int
+    riskFactorId: List[int]
+
+
 class RiskProjectItem(BaseModel):
     """Project risk details for sector-grouped data"""
     projectId: str
@@ -18,8 +24,7 @@ class RiskProjectItem(BaseModel):
     riskImpact: Optional[str] = None
     riskResponse: Optional[str] = None
     phase: Optional[str] = None
-    riskCategoryId: int
-    riskFactorId: int
+    risks: List[RiskCategoryItem] = Field(default_factory=list)
 
 
 class RiskSectorWithProjectItem(BaseModel):
