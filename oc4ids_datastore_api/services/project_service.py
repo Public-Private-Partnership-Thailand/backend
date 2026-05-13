@@ -573,9 +573,21 @@ def _create_additional_classifications(session: Session, project: Project, ac_li
                     )
                 ).first()
 
+        # 3.5. description value might be the code (e.g. data.json stores "BTO" in description
+        #      while the DB record has code="BTO", description="Build-Transfer-Operate (BTO)")
+        if not ac_obj:
+            desc_as_code = ac.get("description")
+            if desc_as_code:
+                ac_obj = session.exec(
+                    select(AdditionalClassification).where(
+                        AdditionalClassification.scheme == scheme,
+                        AdditionalClassification.code == desc_as_code,
+                    )
+                ).first()
+
         # 4. Create only when an explicit string code is provided (never create from numeric id)
         if not ac_obj:
-            code = ac.get("code") or (str(raw_id) if raw_id and not isinstance(raw_id, int) else None)
+            code = ac.get("code") or (str(raw_id) if raw_id and not isinstance(raw_id, int) else None) or ac.get("description")
             if not code:
                 continue
             ac_obj = AdditionalClassification(

@@ -61,7 +61,8 @@ DATA = {
     "contractType": [
         {"id": 1, "value": "BTO", "description": "Build-Transfer-Operate (BTO)"},
         {"id": 2, "value": "BOT", "description": "Build-Operate-Transfer (BOT)"},
-        {"id": 3, "value": "Others", "description": "รูปแบบอื่น ๆ"}
+        {"id": 3, "value": "BTO/BOT", "description": "BTO/BOT"},
+        {"id": 4, "value": "Others", "description": "รูปแบบอื่น ๆ"}
     ],
     "projectType": [
         {"id": 1, "value": "ท่าเรือ"},
