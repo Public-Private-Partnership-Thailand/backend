@@ -3,7 +3,14 @@ import os
 from sqlmodel import Session, SQLModel, create_engine
 
 
-engine = create_engine(os.environ.get("DATABASE_URL", "sqlite:///:memory:"), echo=False)
+engine = create_engine(
+    os.environ.get("DATABASE_URL", "sqlite:///:memory:"),
+    echo=False,
+    pool_size=10,       # connections เปิดค้างไว้ตลอด
+    max_overflow=20,    # connections ชั่วคราวเพิ่มได้อีกเมื่อ pool เต็ม
+    pool_timeout=30,    # รอสูงสุด 30 วิถ้า pool เต็มหมด
+    pool_pre_ping=True, # เช็คว่า connection ยังใช้ได้ก่อนส่งให้ request
+)
 
 def init_db():
     try:
