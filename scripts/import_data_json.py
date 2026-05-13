@@ -15,6 +15,9 @@ except ImportError:
 from sqlmodel import Session
 from oc4ids_datastore_api.database import engine
 from oc4ids_datastore_api.services import create_project_data
+from oc4ids_datastore_api.services.reference_service import invalidate_reference_cache
+from oc4ids_datastore_api.services.dashboard_service import invalidate_summary_cache
+from oc4ids_datastore_api.services.risk_service import invalidate_risk_cache
 
 # Setup basic logging
 logging.basicConfig(level=logging.INFO)
@@ -55,6 +58,10 @@ def import_new_data():
         try:
             session.commit()
             logger.info("Import completed and committed.")
+            invalidate_reference_cache()
+            invalidate_summary_cache()
+            invalidate_risk_cache()
+            logger.info("Caches invalidated.")
         except Exception as e:
             session.rollback()
             logger.error(f"Failed to commit import: {e}")
