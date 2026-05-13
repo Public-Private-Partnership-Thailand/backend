@@ -76,7 +76,7 @@ DATA = {
     ],
     "concessionForm": [
         {"id": 1, "value": "PPP Net Cost"},
-        {"id": 2, "value": "Gross Cost"},
+        {"id": 2, "value": "PPP Gross Cost"},
         {"id": 3, "value": "อื่น ๆ"}
     ]
 }
