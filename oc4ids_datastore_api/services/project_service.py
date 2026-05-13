@@ -919,6 +919,7 @@ def get_all_projects(
             "private_parties": private_parties,
             "sector": [s for s in row.sector_names if s] if getattr(row, "sector_names", None) else [],
             "concession": [c for c in row.concession_names if c] if getattr(row, "concession_names", None) else [],
+            "contract_type": [c for c in row.contract_type_names if c] if getattr(row, "contract_type_names", None) else [],
             "start_date": row.start_date,
         })
     return {

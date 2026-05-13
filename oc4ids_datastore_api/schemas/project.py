@@ -31,6 +31,7 @@ class ProjectListItem(BaseModel):
     private_parties: Optional[List[str]] = Field(None, description="Private parties involved")
     sector: Optional[List[str]] = Field(None, description="Sector names")
     concession: Optional[List[str]] = Field(None, description="Concession form names")
+    contract_type: Optional[List[str]] = Field(None, description="Ownership arrangement types (รูปแบบการจัดสรรกรรมสิทธิ์)")
     start_date: Optional[Any] = Field(None, description="Project start date")
 
 
