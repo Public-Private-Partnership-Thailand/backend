@@ -32,6 +32,25 @@ def invalidate_reference_cache() -> None:
     _cached_at = 0.0
 
 
+_NAMED_CONTRACT_TYPES = {"BTO", "BOT", "BTO/BOT"}
+_CONTRACT_OTHERS_ID = 4
+
+
+def _build_contract_type_options(all_types) -> list:
+    """Return BTO/BOT/BTO-BOT individually; collapse everything else into a single Others entry."""
+    result = []
+    has_others = False
+    for ct in all_types:
+        code = ct.code or ""
+        if code in _NAMED_CONTRACT_TYPES:
+            result.append({"id": ct.id, "value": ct.description or ct.code})
+        else:
+            has_others = True
+    if has_others:
+        result.append({"id": _CONTRACT_OTHERS_ID, "value": "Others"})
+    return result
+
+
 def _build_concession_form_options(all_forms) -> list:
     """Return only canonical PPP options + a single 'อื่น ๆ' sentinel."""
     result = [
@@ -75,7 +94,7 @@ def _query_reference_info(session: Session) -> Dict[str, Any]:
         "ministry": [{"id": m.id, "value": m.name_th} for m in ministries],
         "projectType": [{"id": pt.id, "value": pt.name_th or pt.name_en or pt.code} for pt in project_types],
         "concessionForm": _build_concession_form_options(concession_forms),
-        "contractType": [{"id": ct.id, "value": ct.description or ct.code} for ct in contract_types],
+        "contractType": _build_contract_type_options(contract_types),
         "riskCategory": [
             {
                 "id": rc.risk_category_id,

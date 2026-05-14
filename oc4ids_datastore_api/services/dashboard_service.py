@@ -4,22 +4,11 @@ Dashboard Service — Business Logic
 Aggregates statistics from the Project repository for the dashboard.
 """
 
-import time
 from typing import Any, Dict, List, Optional
 from sqlmodel import Session
 
 from oc4ids_datastore_api.repositories.project_repository import ProjectRepository
 from oc4ids_datastore_api.utils import format_thai_amount, utcnow_naive
-
-SUMMARY_CACHE_TTL_SECONDS: float = 300.0
-_cached_summary: Optional[Dict[str, Any]] = None
-_cached_summary_at: float = 0.0
-
-
-def invalidate_summary_cache() -> None:
-    global _cached_summary, _cached_summary_at
-    _cached_summary = None
-    _cached_summary_at = 0.0
 
 
 def get_dashboard_summary(
@@ -36,17 +25,6 @@ def get_dashboard_summary(
     search: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build the full dashboard summary payload."""
-    global _cached_summary, _cached_summary_at
-
-    no_filters = not any([
-        sector_id, ministry_id, agency_id, concession_form_id,
-        contract_type_id, risk_category_id, risk_factor_id,
-        year_from, year_to, search,
-    ])
-    now = time.monotonic()
-    if no_filters and _cached_summary is not None and (now - _cached_summary_at) < SUMMARY_CACHE_TTL_SECONDS:
-        return _cached_summary
-
     dao = ProjectRepository(session)
 
     # 1. Get aggregated stats
@@ -226,23 +204,29 @@ def get_dashboard_summary(
     investment_by_year_list.sort(key=lambda x: x["year"])
 
     # pieContractTypeCount mapping
-    # Each named type uses its real DB count; empty = projects with no contract type at all.
+    # BTO, BOT, BTO/BOT shown individually; all other named types aggregated into "Others";
+    # projects with no classification shown as "empty".
+    NAMED_CONTRACT_TYPES = {"BTO", "BOT", "BTO/BOT"}
     pie_contract_counts = []
+    others_named_count = 0
     for ct in stats.get("contract_type_counts", []):
-        if ct["count"] > 0:
+        if ct["count"] == 0:
+            continue
+        if ct["name"] in NAMED_CONTRACT_TYPES:
             pie_contract_counts.append({
                 "id": ct["id"],
                 "name": ct["name"],
                 "fullName": ct["fullName"],
                 "count": ct["count"],
             })
-    others_count = stats.get("others_contract_count", 0)
-    if others_count > 0:
+        else:
+            others_named_count += ct["count"]
+    if others_named_count > 0:
         pie_contract_counts.append({
-            "id": None,
-            "name": "empty",
-            "fullName": "ไม่ระบุ",
-            "count": others_count,
+            "id": 4,
+            "name": "Others",
+            "fullName": "Others",
+            "count": others_named_count,
         })
 
     result = {
@@ -268,9 +252,5 @@ def get_dashboard_summary(
         "pieContractTypeCount": pie_contract_counts,
         "locations": locations_data,
     }
-
-    if no_filters:
-        _cached_summary = result
-        _cached_summary_at = now
 
     return result
