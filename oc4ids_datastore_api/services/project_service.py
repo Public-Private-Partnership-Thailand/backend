@@ -442,6 +442,32 @@ def _create_location_gazetteers(session: Session, location_id: uuid.UUID, gazett
                 session.add(LocationGazetteerIdentifier(gazetteer_id=g_obj.id, identifier=ident))
 
 
+def _resolve_risk_category(session: Session, cd: Dict) -> Optional[RiskCategory]:
+    """Resolve a RiskCategory from a category_driver dict.
+
+    Clients send either the integer PK (risk_category_id, e.g. 3) or the
+    string code (risk_category_code, e.g. "CONSTRUCTION"). category_code is
+    a varchar column, so a numeric value must be looked up against the PK
+    instead — comparing `category_code = <int>` errors out in PostgreSQL.
+    """
+    candidates = [cd.get("risk_category_id"), cd.get("risk_category_code")]
+    # Numeric value → integer primary key.
+    for value in candidates:
+        if isinstance(value, int) or (isinstance(value, str) and value.isdigit()):
+            rc_obj = session.get(RiskCategory, int(value))
+            if rc_obj:
+                return rc_obj
+    # Non-numeric value → varchar category_code.
+    for value in candidates:
+        if value is not None:
+            rc_obj = session.exec(
+                select(RiskCategory).where(RiskCategory.category_code == str(value))
+            ).first()
+            if rc_obj:
+                return rc_obj
+    return None
+
+
 def _create_risks(session: Session, project_id: uuid.UUID, risks_list: List[Dict]):
     for r_data in risks_list:
         risk_obj = Risk(project_id=project_id, title=r_data.get("title"), phase=r_data.get("phase"))
@@ -450,13 +476,7 @@ def _create_risks(session: Session, project_id: uuid.UUID, risks_list: List[Dict
 
         for cd in r_data.get("category_drivers", []):
             cat_code = cd.get("risk_category_id") or cd.get("risk_category_code")
-            rc_obj = None
-            if cat_code:
-                rc_obj = session.exec(select(RiskCategory).where(RiskCategory.category_code == cat_code)).first()
-                if not rc_obj:
-                    alt_code = cd.get("risk_category_code") or cd.get("risk_category_id")
-                    if alt_code and alt_code != cat_code:
-                        rc_obj = session.exec(select(RiskCategory).where(RiskCategory.category_code == alt_code)).first()
+            rc_obj = _resolve_risk_category(session, cd)
             if rc_obj:
                 existing = session.exec(
                     select(RiskCategoryAssignment).where(

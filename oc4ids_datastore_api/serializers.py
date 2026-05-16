@@ -244,7 +244,7 @@ def _serialize_risk(risk) -> Dict[str, Any]:
             if fa.risk_factor_id in cat_factor_ids
         ]
         category_drivers.append({
-            "risk_category_id": cat.category_code,
+            "risk_category_id": cat.risk_category_id,
             "risk_category_code": cat.category_code,
             "category_name": cat.category_name,
             "driven_by_risk_factors": [

@@ -393,7 +393,7 @@ class RiskFactorDetailResponse(BaseModel):
 
 
 class CategoryDriverResponse(BaseModel):
-    risk_category_id: Optional[str] = None
+    risk_category_id: Optional[int] = None
     risk_category_code: Optional[str] = None
     category_name: Optional[str] = None
     driven_by_risk_factors: Optional[List[RiskFactorDetailResponse]] = None
