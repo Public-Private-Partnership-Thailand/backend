@@ -81,6 +81,7 @@ from oc4ids_datastore_api.models.risk import (
     RiskCategoryAssignment,
     CategoryFactorLink,
     RiskFactorAssignment,
+    RiskCategoryFactorAssignment,
     RiskSource,
     RiskPhase,
     RiskPattern,
@@ -117,5 +118,6 @@ __all__ = [
     # risk
     "RiskCategory", "RiskFactor", "Risk", "Mitigation", "Impact",
     "RiskCategoryAssignment", "CategoryFactorLink", "RiskFactorAssignment",
+    "RiskCategoryFactorAssignment",
     "RiskSource", "RiskPhase", "RiskPattern",
 ]

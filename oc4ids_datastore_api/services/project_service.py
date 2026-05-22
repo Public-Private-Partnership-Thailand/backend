@@ -38,7 +38,7 @@ from oc4ids_datastore_api.models import (
     ContractingRelease, LocationGazetteer, LocationGazetteerIdentifier,
     ProjectPolicyAlignment, ProjectPolicyAlignmentPolicy, ProjectAssetLifetime,
     Risk, Mitigation, Impact, RiskCategory, RiskFactor,
-    RiskCategoryAssignment, RiskFactorAssignment,
+    RiskCategoryAssignment, RiskFactorAssignment, RiskCategoryFactorAssignment,
 )
 from oc4ids_datastore_api.repositories.project_repository import ProjectRepository
 
@@ -491,9 +491,12 @@ def _create_risks(session: Session, project_id: uuid.UUID, risks_list: List[Dict
 
             for rf_data in cd.get("driven_by_risk_factors", []):
                 factor_name = rf_data.get("factor_name")
+                rf_id = rf_data.get("risk_factor_id")
                 rf_obj = None
                 if factor_name:
                     rf_obj = session.exec(select(RiskFactor).where(RiskFactor.factor_name == factor_name)).first()
+                if not rf_obj and rf_id:
+                    rf_obj = session.get(RiskFactor, int(rf_id))
                 if rf_obj:
                     existing_rfa = session.exec(
                         select(RiskFactorAssignment).where(
@@ -503,8 +506,14 @@ def _create_risks(session: Session, project_id: uuid.UUID, risks_list: List[Dict
                     ).first()
                     if not existing_rfa:
                         session.add(RiskFactorAssignment(risk_id=risk_obj.risk_id, risk_factor_id=rf_obj.risk_factor_id))
+                    if rc_obj:
+                        session.add(RiskCategoryFactorAssignment(
+                            risk_id=risk_obj.risk_id,
+                            risk_category_id=rc_obj.risk_category_id,
+                            risk_factor_id=rf_obj.risk_factor_id,
+                        ))
                 else:
-                    logger.warning(f"RiskFactor '{factor_name}' not found. Skipping.")
+                    logger.warning(f"RiskFactor '{factor_name}' (id={rf_id}) not found. Skipping.")
 
         for mit in r_data.get("mitigation_handling", []):
             if isinstance(mit, dict):

@@ -230,19 +230,19 @@ def project_to_oc4ids(project) -> Dict[str, Any]:
 
 def _serialize_risk(risk) -> Dict[str, Any]:
     """Serialize a Risk to the project risk format"""
-    # For each category assigned to this risk, find which of the risk's factors
-    # also belong to that category (via CategoryFactorLink)
+    # Build a lookup: category_id → [factor_ids] from project-level assignment table
+    cat_to_factor_ids: dict = {}
+    for rcfa in risk.category_factor_assignments:
+        cat_to_factor_ids.setdefault(rcfa.risk_category_id, set()).add(rcfa.risk_factor_id)
+
+    # Build factor lookup: factor_id → RiskFactor object
+    factor_by_id = {fa.risk_factor_id: fa.factor for fa in risk.factor_assignments}
+
     category_drivers = []
     for ca in risk.category_assignments:
         cat = ca.category
-        # Get the factor_ids that are canonically linked to this category
-        cat_factor_ids = {cfl.risk_factor_id for cfl in cat.factor_links}
-        # Intersect with the factors actually assigned to this risk
-        factors_for_cat = [
-            fa.factor
-            for fa in risk.factor_assignments
-            if fa.risk_factor_id in cat_factor_ids
-        ]
+        factor_ids = cat_to_factor_ids.get(cat.risk_category_id, set())
+        factors_for_cat = [factor_by_id[fid] for fid in factor_ids if fid in factor_by_id]
         category_drivers.append({
             "risk_category_id": cat.risk_category_id,
             "risk_category_code": cat.category_code,

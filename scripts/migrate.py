@@ -39,6 +39,28 @@ MIGRATIONS = [
     "CREATE INDEX IF NOT EXISTS ix_agency_ministry_id ON agency (ministry_id)",
     "CREATE INDEX IF NOT EXISTS ix_project_sector_sector_id ON project_sector (sector_id)",
     "CREATE INDEX IF NOT EXISTS ix_project_additional_classifications_classification_id ON project_additional_classifications (classification_id)",
+
+    # 2026-05-22: add risk_category_factor_assignment to store project-level
+    # (risk, category, factor) triples explicitly, replacing CategoryFactorLink inference
+    """
+    CREATE TABLE IF NOT EXISTS risk_category_factor_assignment (
+        risk_id INTEGER NOT NULL REFERENCES risk(risk_id) ON DELETE CASCADE,
+        risk_category_id INTEGER NOT NULL REFERENCES risk_category(risk_category_id),
+        risk_factor_id INTEGER NOT NULL REFERENCES risk_factor(risk_factor_id),
+        PRIMARY KEY (risk_id, risk_category_id, risk_factor_id)
+    )
+    """,
+    # 2026-05-22: backfill existing risks using CategoryFactorLink as the canonical mapping
+    """
+    INSERT INTO risk_category_factor_assignment (risk_id, risk_category_id, risk_factor_id)
+    SELECT rca.risk_id, rca.risk_category_id, rfa.risk_factor_id
+    FROM risk_category_assignment rca
+    JOIN risk_factor_assignment rfa ON rca.risk_id = rfa.risk_id
+    JOIN category_factor_link cfl
+        ON cfl.risk_category_id = rca.risk_category_id
+        AND cfl.risk_factor_id = rfa.risk_factor_id
+    ON CONFLICT DO NOTHING
+    """,
 ]
 
 

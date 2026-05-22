@@ -89,6 +89,7 @@ class Risk(SQLModel, table=True):
     impacts: List["Impact"] = Relationship(back_populates="risk", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     category_assignments: List["RiskCategoryAssignment"] = Relationship(back_populates="risk", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     factor_assignments: List["RiskFactorAssignment"] = Relationship(back_populates="risk", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    category_factor_assignments: List["RiskCategoryFactorAssignment"] = Relationship(sa_relationship_kwargs={"cascade": "all, delete-orphan", "foreign_keys": "[RiskCategoryFactorAssignment.risk_id]"})
 
 
 class Mitigation(SQLModel, table=True):
@@ -148,6 +149,15 @@ class RiskFactorAssignment(SQLModel, table=True):
     # Relationships
     risk: "Risk" = Relationship(back_populates="factor_assignments")
     factor: "RiskFactor" = Relationship(back_populates="risk_assignments")
+
+
+class RiskCategoryFactorAssignment(SQLModel, table=True):
+    """Stores which factor was assigned to which category for a specific risk.
+    Unlike CategoryFactorLink (reference data), this is project-level data."""
+    __tablename__ = "risk_category_factor_assignment"
+    risk_id: int = Field(foreign_key="risk.risk_id", primary_key=True)
+    risk_category_id: int = Field(foreign_key="risk_category.risk_category_id", primary_key=True)
+    risk_factor_id: int = Field(foreign_key="risk_factor.risk_factor_id", primary_key=True)
 
 
 
