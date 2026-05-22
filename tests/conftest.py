@@ -6,12 +6,18 @@ from fastapi.testclient import TestClient
 from typing import Generator
 
 # ตั้งค่าให้ใช้ Test Database (เพื่อไม่ให้ไปกระทบดึงข้อมูลจริง)
-TEST_DB_URL = "postgresql://postgres:REDACTED@localhost/ppp_test"
+TEST_DB_URL = os.environ.get(
+    "TEST_DATABASE_URL",
+    "postgresql://postgres:REDACTED@localhost/ppp_test"
+)
 os.environ["DATABASE_URL"] = TEST_DB_URL
+
+_db_host = TEST_DB_URL.split("@")[1].split("/")[0]
+_db_creds = TEST_DB_URL.split("@")[0].split("//")[1]
 
 # สร้าง Database ppp_test แบบอัตโนมัติ (ถ้ายังไม่มี)
 try:
-    engine_postgres = create_engine("postgresql://postgres:REDACTED@localhost/postgres", isolation_level="AUTOCOMMIT")
+    engine_postgres = create_engine(f"postgresql://{_db_creds}@{_db_host}/postgres", isolation_level="AUTOCOMMIT")
     with engine_postgres.connect() as conn:
         res = conn.execute(text("SELECT 1 FROM pg_database WHERE datname='ppp_test'")).fetchone()
         if not res:
