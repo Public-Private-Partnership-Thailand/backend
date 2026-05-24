@@ -304,6 +304,8 @@ RISK_FACTORS = [
      "ความเสี่ยงจากสภาพอากาศที่ไม่เอื้ออำนวย เช่น ฝนหนัก ความร้อนจัด หรือพายุ ที่ขัดขวางการก่อสร้างและดำเนินงาน"),
     ("Works completion delays",
      "ความเสี่ยงจากความล่าช้าในการก่อสร้างหรือดำเนินงานให้แล้วเสร็จตามกำหนด ส่งผลต่อการเปิดใช้งานและรายได้"),
+    ("Land acquisition and resettlement",
+     "The risk associated with land acquisition processes and resettlement of communities affected by the project."),
 ]
 
 
