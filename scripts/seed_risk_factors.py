@@ -306,6 +306,8 @@ RISK_FACTORS = [
      "ความเสี่ยงจากความล่าช้าในการก่อสร้างหรือดำเนินงานให้แล้วเสร็จตามกำหนด ส่งผลต่อการเปิดใช้งานและรายได้"),
     ("Land acquisition and resettlement",
      "The risk associated with land acquisition processes and resettlement of communities affected by the project."),
+    ("Social Impact from Resettlement Risk",
+     "The risk of adverse social impacts arising from the resettlement of communities displaced by the project."),
 ]
 
 
